@@ -1,0 +1,55 @@
+# Node
+node_modules/
+frontend/node_modules/
+frontend/build/
+frontend/.pnp/
+frontend/.pnp.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+webpack-stats.json
+__pycache__/
+*.pyc
+
+# Laravel / PHP
+/vendor/
+/backend/vendor/
+/backend_new/vendor/
+/node_modules/
+/public/hot
+/public/storage
+/storage/*.key
+/.idea/
+/.vscode/
+Homestead.json
+Homestead.yaml
+.env
+.env.*.local
+.phpunit.result.cache
+/.phpunit.cache
+
+# Mac
+.DS_Store
+
+# Logs
+*.log
+
+# Build
+build/
+**/build/
+**/dist/
+**/tmp/
+
+# OS files
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+
+# Misc
+*.swp
+*.swo
