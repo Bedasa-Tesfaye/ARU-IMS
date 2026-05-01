@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { superAdminAPI } from '../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import { superAdminAPI } from '../../services/api';
 import './SuperAdminDashboard.css';
 
 const QUALIFICATION_OPTIONS = [

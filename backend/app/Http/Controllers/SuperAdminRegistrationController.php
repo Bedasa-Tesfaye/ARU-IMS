@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class SuperAdminRegistrationController extends Controller
 {
@@ -190,6 +191,123 @@ class SuperAdminRegistrationController extends Controller
     public function registerAdvisor(Request $request)
     {
         return $this->registerAcademicStaff($request, 'advisor');
+    }
+
+    public function users(Request $request)
+    {
+        $this->ensureSuperAdmin($request);
+
+        $users = User::query()
+            ->with(['department:id,name,code', 'company:id,name'])
+            ->orderByDesc('id')
+            ->get();
+
+        return response()->json($users);
+    }
+
+    public function updateUser(Request $request, int $id)
+    {
+        $this->ensureSuperAdmin($request);
+
+        $user = User::query()->findOrFail($id);
+        [$firstName, $lastName] = $this->splitFullName((string) $request->input('name', $user->full_name));
+
+        $validated = Validator::make($request->all(), [
+            'name' => 'nullable|string|max:255',
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'phone' => 'nullable|string|max:20',
+            'department_id' => 'nullable|exists:departments,id',
+            'student_id' => ['nullable', 'string', 'max:50', Rule::unique('users', 'student_id')->ignore($user->id)],
+            'employee_id' => ['nullable', 'string', 'max:100', Rule::unique('users', 'employee_id')->ignore($user->id)],
+            'status' => 'nullable|in:active,suspended,pending,inactive',
+        ])->validate();
+
+        $isActive = $user->is_active;
+        if (array_key_exists('status', $validated)) {
+            $isActive = $validated['status'] === 'active';
+        }
+
+        $profileData = is_array($user->profile_data) ? $user->profile_data : [];
+        if (array_key_exists('student_id', $validated)) {
+            $profileData['student_id'] = $validated['student_id'];
+        }
+        if (array_key_exists('employee_id', $validated)) {
+            $profileData['employee_id'] = $validated['employee_id'];
+        }
+
+        $user->update([
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? $user->phone,
+            'department_id' => $validated['department_id'] ?? $user->department_id,
+            'student_id' => $validated['student_id'] ?? $user->student_id,
+            'employee_id' => $validated['employee_id'] ?? $user->employee_id,
+            'is_active' => $isActive,
+            'profile_data' => $profileData,
+        ]);
+
+        return response()->json([
+            'message' => 'User updated successfully.',
+            'user' => $user->load(['department:id,name,code', 'company:id,name']),
+        ]);
+    }
+
+    public function suspendUser(Request $request, int $id)
+    {
+        $this->ensureSuperAdmin($request);
+
+        $user = User::query()->findOrFail($id);
+        $validated = Validator::make($request->all(), [
+            'duration' => 'required|string|max:20',
+            'reason' => 'required|string|max:500',
+        ])->validate();
+
+        $profileData = is_array($user->profile_data) ? $user->profile_data : [];
+        $profileData['suspension'] = [
+            'duration' => $validated['duration'],
+            'reason' => $validated['reason'],
+            'suspended_at' => now()->toIso8601String(),
+        ];
+
+        $user->update([
+            'is_active' => false,
+            'profile_data' => $profileData,
+        ]);
+
+        return response()->json([
+            'message' => 'User suspended successfully.',
+            'user' => $user->fresh()->load(['department:id,name,code', 'company:id,name']),
+        ]);
+    }
+
+    public function deleteUser(Request $request, int $id)
+    {
+        $this->ensureSuperAdmin($request);
+        $actor = auth()->user();
+        abort_if($actor && $actor->id === $id, 422, 'You cannot delete your own account.');
+
+        $user = User::query()->findOrFail($id);
+        $user->delete();
+
+        return response()->json(['message' => 'User deleted successfully.']);
+    }
+
+    public function resetUserPassword(Request $request, int $id)
+    {
+        $this->ensureSuperAdmin($request);
+        $user = User::query()->findOrFail($id);
+
+        $plainPassword = $this->generatePassword();
+        $user->update(['password' => Hash::make($plainPassword)]);
+
+        return response()->json([
+            'message' => 'Password reset successfully.',
+            'credentials' => [
+                'email' => $user->email,
+                'password' => $plainPassword,
+            ],
+        ]);
     }
 
     private function registerAcademicStaff(Request $request, string $role)

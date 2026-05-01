@@ -87,6 +87,11 @@ export const evaluationAPI = {
 
 export const superAdminAPI = {
   getDepartments: () => api.get('/admin/departments'),
+  getUsers: () => api.get('/admin/users'),
+  updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
+  suspendUser: (id, data) => api.post(`/admin/users/${id}/suspend`, data),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`),
+  resetUserPassword: (id) => api.post(`/admin/users/${id}/reset-password`),
   registerStudent: (data) => api.post('/admin/register/student', data),
   registerStudentsBulk: (students) => api.post('/admin/register/students/bulk', { students }),
   registerCompany: (data) => api.post('/admin/register/company', data),

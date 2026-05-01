@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './contexts/AuthContext';
 import LandingPage from './pages/landing page/LandingPage';
 import Login from './pages/Login page/Login';
-import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 import './App.css';
 
 function App() {

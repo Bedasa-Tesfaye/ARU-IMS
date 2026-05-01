@@ -48,6 +48,11 @@ Route::middleware(['jwt.auth'])->group(function () {
 
     Route::prefix('/admin')->group(function () {
         Route::get('/departments', [SuperAdminRegistrationController::class, 'departments']);
+        Route::get('/users', [SuperAdminRegistrationController::class, 'users']);
+        Route::put('/users/{id}', [SuperAdminRegistrationController::class, 'updateUser']);
+        Route::post('/users/{id}/suspend', [SuperAdminRegistrationController::class, 'suspendUser']);
+        Route::post('/users/{id}/reset-password', [SuperAdminRegistrationController::class, 'resetUserPassword']);
+        Route::delete('/users/{id}', [SuperAdminRegistrationController::class, 'deleteUser']);
         Route::post('/register/student', [SuperAdminRegistrationController::class, 'registerStudent']);
         Route::post('/register/students/bulk', [SuperAdminRegistrationController::class, 'registerStudentsBulk']);
         Route::post('/register/company', [SuperAdminRegistrationController::class, 'registerCompany']);
