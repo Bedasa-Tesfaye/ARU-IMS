@@ -21,10 +21,12 @@ class Company extends Model
         'contact_email',
         'contact_phone',
         'is_verified',
+        'meta',
     ];
 
     protected $casts = [
         'is_verified' => 'boolean',
+        'meta' => 'array',
     ];
 
     public function internships()

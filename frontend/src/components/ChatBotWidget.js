@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from 'react';
-import { askChatBot } from '../services/aiChat';
 import './ChatBotWidget.css';
 
 function getStoredUserRole() {
@@ -28,26 +27,26 @@ export default function ChatBotWidget({ context = 'app' }) {
   const [error, setError] = useState('');
 
   const send = async () => {
+    if (!text.trim() || sending) return;
     const q = text.trim();
-    if (!q || sending) return;
-
-    setError('');
-    setSending(true);
-    const userMsg = { id: `u-${Date.now()}`, by: 'user', text: q };
-    setMessages((prev) => [...prev, userMsg]);
     setText('');
-
-    try {
-      const data = await askChatBot({ question: q, role, context });
-      const answer = data?.answer || 'Sorry, I could not answer that right now.';
-      setMessages((prev) => [...prev, { id: `b-${Date.now()}`, by: 'bot', text: answer }]);
-    } catch (e) {
-      const msg = e?.message || 'Failed to send message';
-      setError(msg);
-      setMessages((prev) => [...prev, { id: `b-${Date.now()}`, by: 'bot', text: msg }]);
-    } finally {
+    setSending(true);
+    setError(null);
+    setMessages((prev) => [...prev, { id: `u-${Date.now()}`, by: 'user', text: q }]);
+    
+    // Simple mock response
+    setTimeout(() => {
+      const responses = [
+        'Thank you for your message! Our support team will get back to you soon.',
+        'I understand your question. Please contact support@aru.edu.et for more assistance.',
+        'This is a demo chatbot. For real support, please email our team.',
+        'Your message has been noted. We\'ll respond as soon as possible.',
+        'Thanks for reaching out! Check your email for a response from our team.'
+      ];
+      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+      setMessages((prev) => [...prev, { id: `b-${Date.now()}`, by: 'bot', text: randomResponse }]);
       setSending(false);
-    }
+    }, 1000);
   };
 
   return (

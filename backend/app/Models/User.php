@@ -22,8 +22,11 @@ class User extends Authenticatable implements JWTSubject
         'address',
         'department_id',
         'company_id',
+        'student_id',
+        'employee_id',
         'role',
         'is_active',
+        'profile_data',
     ];
 
     protected $hidden = [
@@ -34,6 +37,7 @@ class User extends Authenticatable implements JWTSubject
     protected $casts = [
         'email_verified_at' => 'datetime',
         'is_active' => 'boolean',
+        'profile_data' => 'array',
     ];
 
     public function getJWTIdentifier()
@@ -96,6 +100,11 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Evaluation::class, 'examiner_id');
     }
 
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
+
     public function isAdmin()
     {
         return in_array($this->role, ['admin', 'super_admin'], true);
@@ -109,6 +118,11 @@ class User extends Authenticatable implements JWTSubject
     public function isCoordinator()
     {
         return $this->role === 'coordinator';
+    }
+
+    public function isDepartmentAdmin()
+    {
+        return $this->role === 'admin';
     }
 
     public function isStudent()

@@ -20,10 +20,20 @@ class AuthController extends Controller
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:255',
             'role' => 'required|in:super_admin,admin,coordinator,student,company,examiner,advisor',
+            'department_id' => 'nullable|exists:departments,id',
+            'company_id' => 'nullable|exists:companies,id',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        // Validate department requirements for department-scoped roles
+        $departmentScopedRoles = ['student', 'coordinator', 'examiner', 'advisor'];
+        if (in_array($request->role, $departmentScopedRoles) && !$request->department_id) {
+            return response()->json([
+                'error' => 'Department ID is required for this role'
+            ], 422);
         }
 
         $user = User::create([
@@ -34,6 +44,8 @@ class AuthController extends Controller
             'phone' => $request->phone,
             'address' => $request->address,
             'role' => $request->role,
+            'department_id' => $request->department_id,
+            'company_id' => $request->company_id,
         ]);
 
         $token = JWTAuth::fromUser($user);
@@ -47,7 +59,10 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $credentials = $request->only('email', 'password');
+        $credentials = [
+            'email' => strtolower(trim((string) $request->input('email'))),
+            'password' => (string) $request->input('password'),
+        ];
 
         $validator = Validator::make($credentials, [
             'email' => 'required|email',

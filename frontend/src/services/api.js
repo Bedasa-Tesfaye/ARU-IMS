@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8002/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -41,13 +41,17 @@ export const authAPI = {
   refresh: () => api.post('/refresh'),
   getProfile: () => api.get('/me'),
   getAuthorityMatrix: () => api.get('/authority-matrix'),
+  getNotifications: (params) => api.get('/notifications', { params }),
+  markNotificationRead: (id) => api.post(`/notifications/${id}/read`),
 };
 
 export const internshipAPI = {
   getInternships: (params) => api.get('/internships', { params }),
   getPublicInternships: (params) => axios.get(`${API_BASE_URL}/public/internships`, { params }),
+  getApprovalQueue: (params) => api.get('/internships/approval-queue/list', { params }),
   getInternship: (id) => api.get(`/internships/${id}`),
   createInternship: (data) => api.post('/internships', data),
+  reviewSubmission: (id, data) => api.post(`/internships/${id}/review-submission`, data),
   updateInternship: (id, data) => api.put(`/internships/${id}`, data),
   deleteInternship: (id) => api.delete(`/internships/${id}`),
   applyToInternship: (id, data) => api.post(`/internships/${id}/apply`, data),
@@ -69,6 +73,7 @@ export const reportAPI = {
   updateReport: (id, data) => api.put(`/reports/${id}`, data),
   reviewReport: (id, data) => api.post(`/reports/${id}/review`, data),
   assignExaminer: (id, examinerId) => api.post(`/reports/${id}/assign-examiner`, { examiner_id: examinerId }),
+  getSlaOverdueReport: (params) => api.get('/admin/sla-overdue-report', { params }),
 };
 
 export const evaluationAPI = {
@@ -78,6 +83,15 @@ export const evaluationAPI = {
   updateEvaluation: (id, data) => api.put(`/evaluations/${id}`, data),
   deleteEvaluation: (id) => api.delete(`/evaluations/${id}`),
   getStudentEvaluations: (studentId) => api.get(`/evaluations/student/${studentId}`),
+};
+
+export const superAdminAPI = {
+  getDepartments: () => api.get('/admin/departments'),
+  registerStudent: (data) => api.post('/admin/register/student', data),
+  registerStudentsBulk: (students) => api.post('/admin/register/students/bulk', { students }),
+  registerCompany: (data) => api.post('/admin/register/company', data),
+  registerExaminer: (data) => api.post('/admin/register/examiner', data),
+  registerAdvisor: (data) => api.post('/admin/register/advisor', data),
 };
 
 export default api;

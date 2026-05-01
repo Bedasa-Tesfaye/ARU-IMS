@@ -18,5 +18,15 @@ class Department extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    public function routedInternships()
+    {
+        return $this->belongsToMany(
+            Internship::class,
+            'internship_department_routes',
+            'department_id',
+            'internship_id'
+        )->withTimestamps();
+    }
 }
 
