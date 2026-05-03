@@ -1,0 +1,147 @@
+/* ============================================ */
+/* HEADER COMPONENT STYLES                      */
+/* ============================================ */
+
+/* Import global header styles */
+@import '../../../header.css';
+
+/* Dashboard-specific header overrides */
+.sa-header {
+  background: white;
+  border-radius: 20px;
+  padding: 1.2rem 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  position: static;
+  height: auto;
+  border: none;
+}
+
+/* Header layout adjustments for dashboard */
+.header-left {
+  gap: 12px;
+}
+
+.header-title {
+  gap: 0.8rem;
+}
+
+.title-icon {
+  width: 48px;
+  height: 48px;
+  font-size: 20px;
+  border-radius: 12px;
+}
+
+.title-text h1 {
+  font-size: 1.2rem;
+  margin-bottom: 2px;
+}
+
+.title-text p {
+  font-size: 0.75rem;
+  color: #6c757d;
+}
+
+/* Sidebar toggle specific to dashboard */
+.sidebar-toggle {
+  width: 36px;
+  height: 36px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+}
+
+.sidebar-toggle:hover {
+  background: #e9ecef;
+  transform: scale(1.05);
+}
+
+/* Header right section adjustments */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Search adjustments for dashboard */
+.global-search {
+  max-width: 400px;
+}
+
+.global-search input {
+  height: 38px;
+  font-size: 0.85rem;
+}
+
+/* Notification adjustments */
+.notification-dropdown {
+  width: 340px;
+  max-height: 450px;
+}
+
+/* Profile dropdown adjustments */
+.profile-dropdown {
+  width: 240px;
+}
+
+/* AI Briefing panel adjustments */
+.ai-briefing-panel {
+  width: 360px;
+  max-height: 550px;
+}
+
+/* Status panel adjustments */
+.status-panel {
+  width: 300px;
+}
+
+/* Quick actions adjustments */
+.quick-actions-dropdown {
+  width: 200px;
+}
+
+/* Responsive adjustments for dashboard */
+@media (max-width: 1024px) {
+  .global-search {
+    max-width: 300px;
+  }
+
+  .ai-briefing-panel {
+    width: 320px;
+    right: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .sa-header {
+    padding: 1rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .header-center {
+    order: 3;
+    width: 100%;
+    max-width: none;
+  }
+
+  .global-search {
+    max-width: none;
+  }
+
+  .header-right {
+    gap: 6px;
+  }
+
+  .notification-dropdown,
+  .profile-dropdown,
+  .ai-briefing-panel,
+  .status-panel {
+    width: calc(100vw - 20px);
+    right: -10px;
+    position: fixed;
+    top: 60px;
+    max-height: 70vh;
+  }
+}

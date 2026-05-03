@@ -1,236 +1,286 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 
 const StudentRegistration = ({ departments, onRegister, onBulkRegister, isSubmitting }) => {
+  const [mode, setMode] = useState('single'); // 'single' or 'bulk'
   const [formData, setFormData] = useState({
     full_name: '',
     phone: '',
     department_id: '',
     year: '',
     cgpa: '',
-    student_id: '',
+    student_id: ''
   });
-  const [bulkMode, setBulkMode] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
-  const [bulkData, setBulkData] = useState([]);
-  const fileInputRef = useRef(null);
+  const [previewData, setPreviewData] = useState([]);
+  const [showPreview, setShowPreview] = useState(false);
+
+  const handleInputChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onRegister(formData, 'student');
   };
 
-  const downloadTemplate = () => {
-    const headers = ['full_name', 'phone', 'department_id', 'year', 'cgpa', 'student_id'];
-    const sampleData = [
-      ['John Doe', '0912345678', '1', '3', '3.5', 'CS2024001'],
-      ['Jane Smith', '0912345679', '2', '2', '3.8', 'IT2024002'],
-    ];
-    
-    const csvContent = [
-      headers.join(','),
-      ...sampleData.map(row => row.join(','))
-    ].join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'student_registration_template.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (file && file.type === 'text/csv') {
       setCsvFile(file);
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const text = event.target.result;
-        const lines = text.split('\n');
-        const headers = lines[0].split(',').map(h => h.trim());
-        
-        const data = [];
-        for (let i = 1; i < lines.length; i++) {
-          if (lines[i].trim()) {
-            const values = lines[i].split(',').map(v => v.trim());
-            const row = {};
-            headers.forEach((header, index) => {
-              row[header] = values[index] || '';
-            });
-            data.push(row);
-          }
-        }
-        setBulkData(data);
-      };
-      reader.readAsText(file);
+      parseCSV(file);
+    } else {
+      alert('Please upload a CSV file');
     }
   };
 
-  const handleBulkSubmit = (e) => {
-    e.preventDefault();
-    if (bulkData.length > 0) {
-      onBulkRegister(bulkData, 'student');
+  const parseCSV = (file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target.result;
+      const lines = text.split('\n').filter(line => line.trim());
+      const headers = lines[0].split(',').map(h => h.trim());
+      
+      const students = lines.slice(1).map((line, index) => {
+        const values = line.split(',').map(v => v.trim());
+        return {
+          id: index + 1,
+          full_name: values[0] || '',
+          phone: values[1] || '',
+          department_id: values[2] || '',
+          year: values[3] || '',
+          cgpa: values[4] || '',
+          student_id: values[5] || ''
+        };
+      }).filter(student => student.full_name);
+      
+      setPreviewData(students);
+      setShowPreview(true);
+    };
+    reader.readAsText(file);
+  };
+
+  const downloadTemplate = () => {
+    const csvContent = 'full_name,phone,department_id,year,cgpa,student_id\nJohn Doe,0912345678,1,3,3.5,CS2024001\nJane Smith,0912345679,2,2,3.8,IT2024002';
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'student_template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleBulkSubmit = () => {
+    if (previewData.length > 0) {
+      onBulkRegister(previewData);
     }
+  };
+
+  const resetBulkForm = () => {
+    setCsvFile(null);
+    setPreviewData([]);
+    setShowPreview(false);
+    const fileInput = document.getElementById('csv-file');
+    if (fileInput) fileInput.value = '';
   };
 
   return (
-    <form className="sa-registration-form" onSubmit={bulkMode ? handleBulkSubmit : handleSubmit}>
-      <div className="form-header">
-        <div className="header-content">
-          <div>
-            <h3>🎓 Student Registration</h3>
-            <p>{bulkMode ? 'Register multiple students from CSV file' : 'Register a new student account with auto-generated credentials'}</p>
-          </div>
-          <div className="mode-toggle">
-            <button
-              type="button"
-              className={`toggle-btn ${!bulkMode ? 'active' : ''}`}
-              onClick={() => setBulkMode(false)}
-            >
-              Single
-            </button>
-            <button
-              type="button"
-              className={`toggle-btn ${bulkMode ? 'active' : ''}`}
-              onClick={() => setBulkMode(true)}
-            >
-              Bulk
-            </button>
-          </div>
-        </div>
+    <div className="student-registration">
+      <div className="registration-modes">
+        <button
+          className={`mode-btn ${mode === 'single' ? 'active' : ''}`}
+          onClick={() => setMode('single')}
+        >
+          Single Registration
+        </button>
+        <button
+          className={`mode-btn ${mode === 'bulk' ? 'active' : ''}`}
+          onClick={() => setMode('bulk')}
+        >
+          Bulk Registration
+        </button>
       </div>
 
-      {!bulkMode ? (
-        <div className="form-grid">
+      {mode === 'single' ? (
+        <form onSubmit={handleSubmit} className="registration-form">
           <div className="form-group">
-            <label>Full Name *</label>
-            <input type="text" value={formData.full_name} onChange={(e) => setFormData({ ...formData, full_name: e.target.value })} required />
+            <label htmlFor="full_name">Full Name</label>
+            <input
+              type="text"
+              id="full_name"
+              name="full_name"
+              value={formData.full_name}
+              onChange={handleInputChange}
+              required
+            />
           </div>
+
           <div className="form-group">
-            <label>Phone Number</label>
-            <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+            <label htmlFor="phone">Phone Number</label>
+            <input
+              type="tel"
+              id="phone"
+              name="phone"
+              value={formData.phone}
+              onChange={handleInputChange}
+              required
+            />
           </div>
+
           <div className="form-group">
-            <label>Department *</label>
-            <select value={formData.department_id} onChange={(e) => setFormData({ ...formData, department_id: e.target.value })} required>
+            <label htmlFor="department_id">Department</label>
+            <select
+              id="department_id"
+              name="department_id"
+              value={formData.department_id}
+              onChange={handleInputChange}
+              required
+            >
               <option value="">Select Department</option>
               {departments.map((dept) => (
-                <option key={dept.id} value={dept.id}>{dept.name}</option>
+                <option key={dept.id} value={dept.id}>
+                  {dept.name}
+                </option>
               ))}
             </select>
           </div>
+
           <div className="form-group">
-            <label>Year of Study *</label>
-            <select value={formData.year} onChange={(e) => setFormData({ ...formData, year: e.target.value })} required>
+            <label htmlFor="year">Year</label>
+            <select
+              id="year"
+              name="year"
+              value={formData.year}
+              onChange={handleInputChange}
+              required
+            >
               <option value="">Select Year</option>
-              {[1, 2, 3, 4, 5].map((year) => (
-                <option key={year} value={year}>{year} Year</option>
-              ))}
+              <option value="1">1st Year</option>
+              <option value="2">2nd Year</option>
+              <option value="3">3rd Year</option>
+              <option value="4">4th Year</option>
+              <option value="5">5th Year</option>
             </select>
           </div>
+
           <div className="form-group">
-            <label>CGPA *</label>
-            <input type="number" step="0.01" min="0" max="4" value={formData.cgpa} onChange={(e) => setFormData({ ...formData, cgpa: e.target.value })} required />
+            <label htmlFor="cgpa">CGPA</label>
+            <input
+              type="number"
+              id="cgpa"
+              name="cgpa"
+              value={formData.cgpa}
+              onChange={handleInputChange}
+              step="0.01"
+              min="0"
+              max="4"
+              required
+            />
           </div>
+
           <div className="form-group">
-            <label>Student ID *</label>
-            <input type="text" value={formData.student_id} onChange={(e) => setFormData({ ...formData, student_id: e.target.value })} required />
+            <label htmlFor="student_id">Student ID</label>
+            <input
+              type="text"
+              id="student_id"
+              name="student_id"
+              value={formData.student_id}
+              onChange={handleInputChange}
+              required
+            />
           </div>
-        </div>
+
+          <button
+            type="submit"
+            className="btn-submit"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Registering...' : 'Register Student'}
+          </button>
+        </form>
       ) : (
-        <div className="bulk-upload-section">
-          <div className="bulk-upload-header">
-            <h4>📁 Upload CSV File</h4>
-            <p>Upload a CSV file containing student information</p>
-          </div>
-          
+        <div className="bulk-registration">
           <div className="template-section">
-            <div className="template-info">
-              <h5>📋 CSV Template Required</h5>
-              <p>The CSV file must contain the following columns:</p>
-              <ul>
-                <li><code>full_name</code> - Student's full name</li>
-                <li><code>phone</code> - Phone number (optional)</li>
-                <li><code>department_id</code> - Department ID (number)</li>
-                <li><code>year</code> - Year of study (1-5)</li>
-                <li><code>cgpa</code> - CGPA (0-4)</li>
-                <li><code>student_id</code> - Student ID</li>
-              </ul>
-            </div>
-            <button type="button" className="btn-template" onClick={downloadTemplate}>
+            <h3>Download Template</h3>
+            <p>Download the CSV template and fill it with student data:</p>
+            <button
+              type="button"
+              className="btn-template"
+              onClick={downloadTemplate}
+            >
               📥 Download Template
             </button>
           </div>
 
-          <div className="file-upload-section">
-            <div className="file-upload-area">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv"
-                onChange={handleFileUpload}
-                style={{ display: 'none' }}
-              />
-              <button
-                type="button"
-                className="btn-upload"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                📤 Choose CSV File
-              </button>
-              {csvFile && (
-                <div className="file-info">
-                  <span className="file-name">📄 {csvFile.name}</span>
-                  <span className="file-size">({(csvFile.size / 1024).toFixed(2)} KB)</span>
-                </div>
-              )}
-            </div>
+          <div className="upload-section">
+            <h3>Upload CSV File</h3>
+            <input
+              type="file"
+              id="csv-file"
+              accept=".csv"
+              onChange={handleFileUpload}
+              className="file-input"
+            />
           </div>
 
-          {bulkData.length > 0 && (
-            <div className="bulk-preview">
-              <h5>📊 Data Preview ({bulkData.length} students)</h5>
+          {showPreview && (
+            <div className="preview-section">
+              <h3>Preview ({previewData.length} students)</h3>
               <div className="preview-table">
                 <table>
                   <thead>
                     <tr>
                       <th>Full Name</th>
-                      <th>Student ID</th>
+                      <th>Phone</th>
                       <th>Department</th>
                       <th>Year</th>
                       <th>CGPA</th>
+                      <th>Student ID</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {bulkData.slice(0, 5).map((student, index) => (
-                      <tr key={index}>
+                    {previewData.slice(0, 5).map((student) => (
+                      <tr key={student.id}>
                         <td>{student.full_name}</td>
-                        <td>{student.student_id}</td>
+                        <td>{student.phone}</td>
                         <td>{student.department_id}</td>
                         <td>{student.year}</td>
                         <td>{student.cgpa}</td>
+                        <td>{student.student_id}</td>
                       </tr>
                     ))}
-                    {bulkData.length > 5 && (
-                      <tr>
-                        <td colSpan="5" className="more-rows">
-                          ... and {bulkData.length - 5} more students
-                        </td>
-                      </tr>
-                    )}
                   </tbody>
                 </table>
+                {previewData.length > 5 && (
+                  <p className="preview-note">... and {previewData.length - 5} more students</p>
+                )}
+              </div>
+
+              <div className="preview-actions">
+                <button
+                  type="button"
+                  className="btn-submit"
+                  onClick={handleBulkSubmit}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Registering...' : `Register ${previewData.length} Students`}
+                </button>
+                <button
+                  type="button"
+                  className="btn-cancel"
+                  onClick={resetBulkForm}
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           )}
         </div>
       )}
-
-      <button type="submit" className="btn-submit" disabled={isSubmitting || (bulkMode && bulkData.length === 0)}>
-        {isSubmitting ? 'Registering...' : bulkMode ? `🎓 Register ${bulkData.length} Students` : '🎓 Register Student'}
-      </button>
-    </form>
+    </div>
   );
 };
 

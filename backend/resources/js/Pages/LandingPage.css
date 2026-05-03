@@ -1,0 +1,215 @@
+/* ============================================ */
+/* LANDING PAGE STYLES                          */
+/* ============================================ */
+
+/* Import all landing page component styles */
+@import '../styles/VideoHero.css';
+@import '../styles/EnhancedLanding.css';
+@import '../styles/FeaturesSection.css';
+@import '../styles/AboutSection.css';
+@import '../styles/StatsSection.css';
+@import '../styles/PartnershipSection.css';
+@import '../styles/UniversityInfo.css';
+
+/* Landing Page Container */
+.landing-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Video Background */
+.video-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.video-background video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.4);
+}
+
+/* Overlay for better text readability */
+.video-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 0;
+}
+
+/* Main Content */
+.landing-content {
+  position: relative;
+  z-index: 1;
+  padding: 0;
+}
+
+/* Hero Section */
+.hero-section {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: white;
+  padding: 2rem;
+  position: relative;
+}
+
+.hero-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  animation: fadeInUp 1s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-title {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  line-height: 1.1;
+}
+
+.hero-subtitle {
+  font-size: clamp(1.1rem, 2.5vw, 1.5rem);
+  margin-bottom: 2.5rem;
+  opacity: 0.9;
+  line-height: 1.6;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 2rem;
+}
+
+.hero-btn {
+  padding: 1rem 2rem;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 160px;
+  justify-content: center;
+}
+
+.hero-btn.primary {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+  color: white;
+  box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
+}
+
+.hero-btn.primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px rgba(255, 107, 107, 0.4);
+}
+
+.hero-btn.secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+.hero-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+/* Scroll Indicator */
+.scroll-indicator {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  40% {
+    transform: translateX(-50%) translateY(-10px);
+  }
+  60% {
+    transform: translateX(-50%) translateY(-5px);
+  }
+}
+
+.scroll-text {
+  color: white;
+  font-size: 0.9rem;
+  opacity: 0.8;
+  margin-bottom: 0.5rem;
+}
+
+.scroll-arrow {
+  width: 24px;
+  height: 24px;
+  border: 2px solid white;
+  border-left: none;
+  border-top: none;
+  transform: rotate(45deg);
+  margin: 0 auto;
+  opacity: 0.8;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .hero-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .hero-btn {
+    width: 100%;
+    max-width: 280px;
+  }
+
+  .hero-section {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 2rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1rem;
+  }
+}

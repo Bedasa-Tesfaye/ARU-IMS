@@ -8,6 +8,16 @@ const Sidebar = ({ activeSection, setActiveSection, sidebarOpen, setSidebarOpen 
       icon: '📊',
     },
     {
+      id: 'analytics',
+      label: 'Analytics',
+      icon: '📈',
+      subItems: [
+        { id: 'analytics-overview', label: 'Dashboard Analytics', icon: '📊' },
+        { id: 'user-analytics', label: 'User Analytics', icon: '👥' },
+        { id: 'system-health', label: 'System Health', icon: '💚' },
+      ],
+    },
+    {
       id: 'registrations',
       label: 'Registrations',
       icon: '➕',
@@ -32,16 +42,30 @@ const Sidebar = ({ activeSection, setActiveSection, sidebarOpen, setSidebarOpen 
       ],
     },
     {
+      id: 'notifications',
+      label: 'Notifications',
+      icon: '🔔',
+    },
+    {
+      id: 'audit-logs',
+      label: 'Audit Logs',
+      icon: '📋',
+    },
+    {
       id: 'settings',
       label: 'Settings',
       icon: '⚙️',
     },
   ];
 
-  const [openMenus, setOpenMenus] = React.useState({ registrations: true, 'user-management': true });
+  const [openMenus, setOpenMenus] = React.useState({ analytics: true, registrations: true, 'user-management': true });
 
   const toggleMenu = (menuId) => {
     setOpenMenus((prev) => ({ ...prev, [menuId]: !prev[menuId] }));
+  };
+
+  const handleItemClick = (itemId) => {
+    setActiveSection(itemId);
   };
 
   return (
@@ -49,75 +73,64 @@ const Sidebar = ({ activeSection, setActiveSection, sidebarOpen, setSidebarOpen 
       <div className="sa-sidebar-header">
         <div className="sa-sidebar-logo">
           <span className="logo-icon">👑</span>
-          {sidebarOpen && (
-            <div className="logo-text">
-              <h2>ARU IMS</h2>
-              <p>Super Admin Portal</p>
-            </div>
-          )}
+          <span className="logo-text">Super Admin</span>
         </div>
-        <button type="button" className="sidebar-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
+        <button
+          className="sa-sidebar-toggle"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+        >
           {sidebarOpen ? '◀' : '▶'}
         </button>
       </div>
 
-      <div className="sa-sidebar-user">
-        <div className="user-avatar">SA</div>
-        {sidebarOpen && (
-          <div className="user-info">
-            <h4>Super Admin</h4>
-            <p>System Administrator</p>
+      <div className="sa-sidebar-content">
+        <div className="sa-user-info">
+          <div className="sa-user-avatar">👑</div>
+          <div className="sa-user-details">
+            <div className="sa-user-name">Super Admin</div>
+            <div className="sa-user-role">Administrator</div>
           </div>
-        )}
-      </div>
-
-      <nav className="sa-sidebar-nav">
-        {menuItems.map((item) => (
-          <div key={item.id} className="sidebar-nav-item">
-            {item.subItems ? (
-              <>
-                <div className={`nav-header ${openMenus[item.id] ? 'open' : ''}`} onClick={() => toggleMenu(item.id)}>
-                  <span className="nav-icon">{item.icon}</span>
-                  {sidebarOpen && (
-                    <>
-                      <span className="nav-label">{item.label}</span>
-                      <span className="nav-arrow">{openMenus[item.id] ? '▼' : '▶'}</span>
-                    </>
-                  )}
-                </div>
-                {openMenus[item.id] && sidebarOpen && (
-                  <div className="nav-submenu">
-                    {item.subItems.map((sub) => (
-                      <div
-                        key={sub.id}
-                        className={`nav-subitem ${activeSection === sub.id ? 'active' : ''}`}
-                        onClick={() => setActiveSection(sub.id)}
-                      >
-                        <span className="sub-icon">{sub.icon}</span>
-                        <span className="sub-label">{sub.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <div
-                className={`nav-item ${activeSection === item.id ? 'active' : ''}`}
-                onClick={() => setActiveSection(item.id)}
-              >
-                <span className="nav-icon">{item.icon}</span>
-                {sidebarOpen && <span className="nav-label">{item.label}</span>}
-              </div>
-            )}
-          </div>
-        ))}
-      </nav>
-
-      <div className="sa-sidebar-footer">
-        <div className="footer-item">
-          <span className="footer-icon">🚪</span>
-          {sidebarOpen && <span>Logout</span>}
         </div>
+
+        <nav className="sa-sidebar-nav">
+          {menuItems.map((item) => (
+            <div key={item.id} className="sa-nav-item">
+              <div
+                className={`sa-nav-link ${activeSection === item.id ? 'active' : ''}`}
+                onClick={() => {
+                  if (item.subItems) {
+                    toggleMenu(item.id);
+                  } else {
+                    handleItemClick(item.id);
+                  }
+                }}
+              >
+                <span className="sa-nav-icon">{item.icon}</span>
+                <span className="sa-nav-label">{item.label}</span>
+                {item.subItems && (
+                  <span className="sa-nav-arrow">
+                    {openMenus[item.id] ? '▼' : '▶'}
+                  </span>
+                )}
+              </div>
+              
+              {item.subItems && openMenus[item.id] && (
+                <div className="sa-submenu">
+                  {item.subItems.map((subItem) => (
+                    <div
+                      key={subItem.id}
+                      className={`sa-submenu-item ${activeSection === subItem.id ? 'active' : ''}`}
+                      onClick={() => handleItemClick(subItem.id)}
+                    >
+                      <span className="sa-submenu-icon">{subItem.icon}</span>
+                      <span className="sa-submenu-label">{subItem.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </nav>
       </div>
     </div>
   );

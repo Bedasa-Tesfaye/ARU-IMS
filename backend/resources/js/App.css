@@ -1,0 +1,9 @@
+﻿/* ============================================ */
+/* MAIN APP CSS - IMPORTS                       */
+/* ============================================ */
+
+/* Import global styles and variables */
+@import './globals.css';
+
+/* Import header component styles */
+@import './header.css';

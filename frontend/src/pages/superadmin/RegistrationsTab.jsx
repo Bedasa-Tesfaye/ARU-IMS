@@ -1,0 +1,1118 @@
+import React, { useState, useEffect } from 'react';
+import { superAdminAPI } from '../../services/api';
+
+const RegistrationsTab = ({ darkMode = false }) => {
+  const [activeRegistration, setActiveRegistration] = useState('student');
+  const [departments, setDepartments] = useState([]);
+  const [formData, setFormData] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [showCredentials, setShowCredentials] = useState(false);
+  const [generatedCredentials, setGeneratedCredentials] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
+  const [successMessage, setSuccessMessage] = useState('');
+
+  useEffect(() => {
+    loadDepartments();
+  }, []);
+
+  const loadDepartments = async () => {
+    try {
+      const response = await superAdminAPI.getDepartments();
+      setDepartments(response.data);
+    } catch (error) {
+      console.error('Error loading departments:', error);
+    }
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (formErrors[field]) {
+      setFormErrors(prev => ({ ...prev, [field]: null }));
+    }
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    const requiredFields = {
+      student: ['first_name', 'last_name', 'student_id', 'department_id', 'year', 'cgpa'],
+      company: ['name', 'email', 'phone', 'address', 'industry'],
+      examiner: ['first_name', 'last_name', 'email', 'phone', 'department_id', 'specialization'],
+      advisor: ['first_name', 'last_name', 'email', 'phone', 'department_id', 'experience_years']
+    };
+
+    const fields = requiredFields[activeRegistration] || [];
+    fields.forEach(field => {
+      if (!formData[field] || formData[field].toString().trim() === '') {
+        errors[field] = `${field.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} is required`;
+      }
+    });
+
+    // Email validation
+    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    // Phone validation
+    if (formData.phone && !/^(\+251|0)[0-9]{8,9}$/.test(formData.phone)) {
+      errors.phone = 'Please enter a valid Ethiopian phone number';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
+    setSuccessMessage('');
+
+    try {
+      let response;
+      switch (activeRegistration) {
+        case 'student':
+          response = await superAdminAPI.registerStudent(formData);
+          break;
+        case 'company':
+          response = await superAdminAPI.registerCompany(formData);
+          break;
+        case 'examiner':
+          response = await superAdminAPI.registerExaminer(formData);
+          break;
+        case 'advisor':
+          response = await superAdminAPI.registerAdvisor(formData);
+          break;
+        default:
+          throw new Error('Invalid registration type');
+      }
+
+      setGeneratedCredentials(response.data);
+      setShowCredentials(true);
+      setSuccessMessage(`${activeRegistration.charAt(0).toUpperCase() + activeRegistration.slice(1)} registered successfully!`);
+      setFormData({}); // Clear form
+
+      // Auto-hide success message
+      setTimeout(() => setSuccessMessage(''), 5000);
+
+    } catch (error) {
+      console.error('Registration error:', error);
+      setFormErrors({ general: error.response?.data?.message || 'Registration failed. Please try again.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const registrationTypes = [
+    { id: 'student', label: 'Student', icon: '🎓', description: 'Register new students' },
+    { id: 'company', label: 'Company', icon: '🏢', description: 'Add partner companies' },
+    { id: 'examiner', label: 'Examiner', icon: '👨‍🏫', description: 'Register internship examiners' },
+    { id: 'advisor', label: 'Advisor', icon: '👨‍💼', description: 'Add academic advisors' }
+  ];
+
+  const renderFormFields = () => {
+    const commonFields = (
+      <>
+        <div className="form-row">
+          <div className="form-group">
+            <label>First Name *</label>
+            <input
+              type="text"
+              value={formData.first_name || ''}
+              onChange={(e) => handleInputChange('first_name', e.target.value)}
+              className={formErrors.first_name ? 'error' : ''}
+              placeholder="Enter first name"
+            />
+            {formErrors.first_name && <span className="error-text">{formErrors.first_name}</span>}
+          </div>
+          <div className="form-group">
+            <label>Last Name *</label>
+            <input
+              type="text"
+              value={formData.last_name || ''}
+              onChange={(e) => handleInputChange('last_name', e.target.value)}
+              className={formErrors.last_name ? 'error' : ''}
+              placeholder="Enter last name"
+            />
+            {formErrors.last_name && <span className="error-text">{formErrors.last_name}</span>}
+          </div>
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label>Email *</label>
+            <input
+              type="email"
+              value={formData.email || ''}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+              className={formErrors.email ? 'error' : ''}
+              placeholder="Enter email address"
+            />
+            {formErrors.email && <span className="error-text">{formErrors.email}</span>}
+          </div>
+          <div className="form-group">
+            <label>Phone *</label>
+            <input
+              type="tel"
+              value={formData.phone || ''}
+              onChange={(e) => handleInputChange('phone', e.target.value)}
+              className={formErrors.phone ? 'error' : ''}
+              placeholder="+251XXXXXXXXX"
+            />
+            {formErrors.phone && <span className="error-text">{formErrors.phone}</span>}
+          </div>
+        </div>
+      </>
+    );
+
+    switch (activeRegistration) {
+      case 'student':
+        return (
+          <>
+            {commonFields}
+            <div className="form-row">
+              <div className="form-group">
+                <label>Student ID *</label>
+                <input
+                  type="text"
+                  value={formData.student_id || ''}
+                  onChange={(e) => handleInputChange('student_id', e.target.value)}
+                  className={formErrors.student_id ? 'error' : ''}
+                  placeholder="e.g., STU001"
+                />
+                {formErrors.student_id && <span className="error-text">{formErrors.student_id}</span>}
+              </div>
+              <div className="form-group">
+                <label>Department *</label>
+                <select
+                  value={formData.department_id || ''}
+                  onChange={(e) => handleInputChange('department_id', e.target.value)}
+                  className={formErrors.department_id ? 'error' : ''}
+                >
+                  <option value="">Select Department</option>
+                  {departments.map(dept => (
+                    <option key={dept.id} value={dept.id}>{dept.name}</option>
+                  ))}
+                </select>
+                {formErrors.department_id && <span className="error-text">{formErrors.department_id}</span>}
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Year of Study *</label>
+                <select
+                  value={formData.year || ''}
+                  onChange={(e) => handleInputChange('year', e.target.value)}
+                  className={formErrors.year ? 'error' : ''}
+                >
+                  <option value="">Select Year</option>
+                  <option value="1">1st Year</option>
+                  <option value="2">2nd Year</option>
+                  <option value="3">3rd Year</option>
+                  <option value="4">4th Year</option>
+                  <option value="5">5th Year</option>
+                </select>
+                {formErrors.year && <span className="error-text">{formErrors.year}</span>}
+              </div>
+              <div className="form-group">
+                <label>CGPA *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="4"
+                  value={formData.cgpa || ''}
+                  onChange={(e) => handleInputChange('cgpa', e.target.value)}
+                  className={formErrors.cgpa ? 'error' : ''}
+                  placeholder="e.g., 3.5"
+                />
+                {formErrors.cgpa && <span className="error-text">{formErrors.cgpa}</span>}
+              </div>
+            </div>
+          </>
+        );
+
+      case 'company':
+        return (
+          <>
+            <div className="form-row">
+              <div className="form-group full-width">
+                <label>Company Name *</label>
+                <input
+                  type="text"
+                  value={formData.name || ''}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  className={formErrors.name ? 'error' : ''}
+                  placeholder="Enter company name"
+                />
+                {formErrors.name && <span className="error-text">{formErrors.name}</span>}
+              </div>
+            </div>
+            {commonFields}
+            <div className="form-row">
+              <div className="form-group">
+                <label>Industry *</label>
+                <select
+                  value={formData.industry || ''}
+                  onChange={(e) => handleInputChange('industry', e.target.value)}
+                  className={formErrors.industry ? 'error' : ''}
+                >
+                  <option value="">Select Industry</option>
+                  <option value="Technology">Technology</option>
+                  <option value="Finance">Finance</option>
+                  <option value="Healthcare">Healthcare</option>
+                  <option value="Education">Education</option>
+                  <option value="Manufacturing">Manufacturing</option>
+                  <option value="Retail">Retail</option>
+                  <option value="Consulting">Consulting</option>
+                  <option value="Other">Other</option>
+                </select>
+                {formErrors.industry && <span className="error-text">{formErrors.industry}</span>}
+              </div>
+              <div className="form-group">
+                <label>Company Size</label>
+                <select
+                  value={formData.size || ''}
+                  onChange={(e) => handleInputChange('size', e.target.value)}
+                >
+                  <option value="">Select Size</option>
+                  <option value="1-10">1-10 employees</option>
+                  <option value="11-50">11-50 employees</option>
+                  <option value="51-200">51-200 employees</option>
+                  <option value="201-1000">201-1000 employees</option>
+                  <option value="1000+">1000+ employees</option>
+                </select>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group full-width">
+                <label>Address *</label>
+                <textarea
+                  value={formData.address || ''}
+                  onChange={(e) => handleInputChange('address', e.target.value)}
+                  className={formErrors.address ? 'error' : ''}
+                  placeholder="Enter company address"
+                  rows="3"
+                />
+                {formErrors.address && <span className="error-text">{formErrors.address}</span>}
+              </div>
+            </div>
+          </>
+        );
+
+      case 'examiner':
+      case 'advisor':
+        return (
+          <>
+            {commonFields}
+            <div className="form-row">
+              <div className="form-group">
+                <label>Department *</label>
+                <select
+                  value={formData.department_id || ''}
+                  onChange={(e) => handleInputChange('department_id', e.target.value)}
+                  className={formErrors.department_id ? 'error' : ''}
+                >
+                  <option value="">Select Department</option>
+                  {departments.map(dept => (
+                    <option key={dept.id} value={dept.id}>{dept.name}</option>
+                  ))}
+                </select>
+                {formErrors.department_id && <span className="error-text">{formErrors.department_id}</span>}
+              </div>
+              <div className="form-group">
+                <label>Specialization *</label>
+                <input
+                  type="text"
+                  value={formData.specialization || ''}
+                  onChange={(e) => handleInputChange('specialization', e.target.value)}
+                  className={formErrors.specialization ? 'error' : ''}
+                  placeholder="e.g., Software Engineering"
+                />
+                {formErrors.specialization && <span className="error-text">{formErrors.specialization}</span>}
+              </div>
+            </div>
+            {activeRegistration === 'advisor' && (
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Experience (Years) *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.experience_years || ''}
+                    onChange={(e) => handleInputChange('experience_years', e.target.value)}
+                    className={formErrors.experience_years ? 'error' : ''}
+                    placeholder="e.g., 5"
+                  />
+                  {formErrors.experience_years && <span className="error-text">{formErrors.experience_years}</span>}
+                </div>
+                <div className="form-group">
+                  <label>Qualification</label>
+                  <select
+                    value={formData.qualification || ''}
+                    onChange={(e) => handleInputChange('qualification', e.target.value)}
+                  >
+                    <option value="">Select Qualification</option>
+                    <option value="PhD">PhD</option>
+                    <option value="Masters">Masters</option>
+                    <option value="Bachelors">Bachelors</option>
+                    <option value="Diploma">Diploma</option>
+                  </select>
+                </div>
+              </div>
+            )}
+          </>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className={`registrations-tab ${darkMode ? 'dark' : ''}`}>
+      {/* Registration Type Selector */}
+      <div className="registration-cards">
+        {registrationTypes.map(type => (
+          <div
+            key={type.id}
+            className={`reg-card ${activeRegistration === type.id ? 'active' : ''} ${darkMode ? 'dark' : ''}`}
+            onClick={() => {
+              setActiveRegistration(type.id);
+              setFormData({});
+              setFormErrors({});
+              setSuccessMessage('');
+            }}
+          >
+            <div className="reg-icon">{type.icon}</div>
+            <h3>{type.label}</h3>
+            <p>{type.description}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Success Message */}
+      {successMessage && (
+        <div className="success-message">
+          <span className="success-icon">✅</span>
+          <span>{successMessage}</span>
+        </div>
+      )}
+
+      {/* General Error Message */}
+      {formErrors.general && (
+        <div className="error-message">
+          <span className="error-icon">❌</span>
+          <span>{formErrors.general}</span>
+        </div>
+      )}
+
+      {/* Registration Form */}
+      <div className={`registration-content ${darkMode ? 'dark' : ''}`}>
+        <h2>Register New {registrationTypes.find(t => t.id === activeRegistration)?.label}</h2>
+        <form className="registration-form" onSubmit={handleSubmit}>
+          {renderFormFields()}
+
+          <button
+            type="submit"
+            className={`submit-btn ${loading ? 'loading' : ''}`}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <span className="spinner"></span>
+                Registering...
+              </>
+            ) : (
+              `Register ${registrationTypes.find(t => t.id === activeRegistration)?.label}`
+            )}
+          </button>
+        </form>
+      </div>
+
+      {/* Credentials Modal */}
+      {showCredentials && generatedCredentials && (
+        <CredentialsModal
+          credentials={generatedCredentials}
+          onClose={() => setShowCredentials(false)}
+          darkMode={darkMode}
+        />
+      )}
+    </div>
+  );
+};
+
+// Enhanced Credentials Modal Component
+const CredentialsModal = ({ credentials, onClose, darkMode }) => {
+  const [copiedField, setCopiedField] = useState('');
+
+  const copyToClipboard = async (text, field) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(''), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const downloadCredentials = () => {
+    const content = `ARU IMS Account Credentials
+
+Email: ${credentials.email}
+Password: ${credentials.password}
+
+Please change your password after first login.
+Account expires in ${credentials.expires_in_days} days.
+
+Generated on: ${new Date().toLocaleString()}`;
+
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${credentials.user?.first_name || 'user'}_credentials.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const printCredentials = () => {
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>ARU IMS Credentials</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .credentials { border: 1px solid #ddd; padding: 20px; border-radius: 8px; }
+            .field { margin: 10px 0; }
+            .label { font-weight: bold; }
+            .value { font-family: monospace; background: #f5f5f5; padding: 5px; border-radius: 4px; }
+          </style>
+        </head>
+        <body>
+          <h1>ARU IMS Account Credentials</h1>
+          <div class="credentials">
+            <div class="field">
+              <span class="label">Email:</span>
+              <div class="value">${credentials.email}</div>
+            </div>
+            <div class="field">
+              <span class="label">Password:</span>
+              <div class="value">${credentials.password}</div>
+            </div>
+            <p><strong>Important:</strong> Please change your password after first login.</p>
+            <p>Account expires in ${credentials.expires_in_days} days.</p>
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  return (
+    <div className="credentials-modal-overlay">
+      <div className={`credentials-modal ${darkMode ? 'dark' : ''}`}>
+        <div className="modal-header">
+          <h3>🎉 Registration Successful!</h3>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
+
+        <div className="credentials-panel">
+          <div className="credentials-info">
+            <p><strong>Account created successfully!</strong> Please save these credentials securely.</p>
+          </div>
+
+          <div className="credentials-display">
+            <h4>Account Credentials</h4>
+            <div className="credentials-box">
+              <div className="credential-item">
+                <label>Email:</label>
+                <div className="credential-value">
+                  <span>{credentials.email}</span>
+                  <button
+                    onClick={() => copyToClipboard(credentials.email, 'email')}
+                    title="Copy email"
+                  >
+                    {copiedField === 'email' ? '✅' : '📋'}
+                  </button>
+                </div>
+              </div>
+              <div className="credential-item">
+                <label>Password:</label>
+                <div className="credential-value">
+                  <span>{credentials.password}</span>
+                  <button
+                    onClick={() => copyToClipboard(credentials.password, 'password')}
+                    title="Copy password"
+                  >
+                    {copiedField === 'password' ? '✅' : '📋'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="credentials-warning">
+            <p><strong>⚠️ Security Notice:</strong> Please change your password after first login. Keep these credentials secure and do not share them with others.</p>
+          </div>
+
+          <div className="credentials-actions">
+            <button className="action-btn email" onClick={() => window.open(`mailto:${credentials.email}?subject=ARU IMS Account&body=Your account has been created.%0D%0AEmail: ${credentials.email}%0D%0APassword: ${credentials.password}%0D%0APlease change your password after login.`)}>
+              📧 Email Credentials
+            </button>
+            <button className="action-btn download" onClick={downloadCredentials}>
+              💾 Download
+            </button>
+            <button className="action-btn print" onClick={printCredentials}>
+              🖨️ Print
+            </button>
+            <button className="action-btn copy-all" onClick={() => copyToClipboard(`Email: ${credentials.email}\nPassword: ${credentials.password}`, 'all')}>
+              📋 Copy All
+            </button>
+          </div>
+
+          <div className="modal-footer">
+            <button className="secondary-btn" onClick={onClose}>Close</button>
+            <button className="primary-btn" onClick={() => {
+              copyToClipboard(`Email: ${credentials.email}\nPassword: ${credentials.password}`, 'all');
+              onClose();
+            }}>
+              Copy & Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default RegistrationsTab;
+
+      setGeneratedCredentials(response.data.credentials);
+      setShowCredentials(true);
+      setFormData({}); // Reset form
+    } catch (error) {
+      console.error('Registration error:', error);
+      alert('Registration failed: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    alert('Copied to clipboard!');
+  };
+
+  const downloadCredentials = () => {
+    const content = `ARU IMS Credentials\n\nUser: ${generatedCredentials.user || 'N/A'}\nEmail: ${generatedCredentials.email}\nPassword: ${generatedCredentials.password}\n\nExpires in: ${generatedCredentials.expires_in_days} days\n\nGenerated on: ${new Date().toLocaleString()}`;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'credentials.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const printCredentials = () => {
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>ARU IMS Credentials</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .credentials { border: 1px solid #ccc; padding: 20px; border-radius: 8px; }
+            .warning { color: #e74c3c; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <h1>ARU IMS Credentials</h1>
+          <div class="credentials">
+            <p><strong>Email:</strong> ${generatedCredentials.email}</p>
+            <p><strong>Password:</strong> ${generatedCredentials.password}</p>
+            <p class="warning">⚠️ Password expires in ${generatedCredentials.expires_in_days} days</p>
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
+  const StudentForm = () => (
+    <form onSubmit={handleSubmit} className="registration-form">
+      <div className="form-row">
+        <div className="form-group">
+          <label>First Name *</label>
+          <input
+            type="text"
+            required
+            value={formData.first_name || ''}
+            onChange={(e) => handleInputChange('first_name', e.target.value)}
+          />
+        </div>
+        <div className="form-group">
+          <label>Last Name *</label>
+          <input
+            type="text"
+            required
+            value={formData.last_name || ''}
+            onChange={(e) => handleInputChange('last_name', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label>Phone</label>
+          <input
+            type="tel"
+            value={formData.phone || ''}
+            onChange={(e) => handleInputChange('phone', e.target.value)}
+          />
+        </div>
+        <div className="form-group">
+          <label>College *</label>
+          <select
+            required
+            value={formData.college_id || ''}
+            onChange={(e) => handleInputChange('college_id', e.target.value)}
+          >
+            <option value="">Select College</option>
+            {/* Add college options here */}
+          </select>
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label>Department *</label>
+          <select
+            required
+            value={formData.department_id || ''}
+            onChange={(e) => handleInputChange('department_id', e.target.value)}
+          >
+            <option value="">Select Department</option>
+            {departments.map(dept => (
+              <option key={dept.id} value={dept.id}>{dept.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label>Year *</label>
+          <select
+            required
+            value={formData.year || ''}
+            onChange={(e) => handleInputChange('year', e.target.value)}
+          >
+            <option value="">Select Year</option>
+            <option value="1">1st Year</option>
+            <option value="2">2nd Year</option>
+            <option value="3">3rd Year</option>
+            <option value="4">4th Year</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label>Student ID *</label>
+          <input
+            type="text"
+            required
+            value={formData.student_id || ''}
+            onChange={(e) => handleInputChange('student_id', e.target.value)}
+          />
+        </div>
+        <div className="form-group">
+          <label>CGPA *</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            max="4"
+            required
+            value={formData.cgpa || ''}
+            onChange={(e) => handleInputChange('cgpa', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <button type="submit" className="submit-btn" disabled={loading}>
+        {loading ? 'Registering...' : 'Register Student'}
+      </button>
+    </form>
+  );
+
+  const CompanyForm = () => (
+    <form onSubmit={handleSubmit} className="registration-form">
+      <div className="form-row">
+        <div className="form-group">
+          <label>Company Name *</label>
+          <input
+            type="text"
+            required
+            value={formData.name || ''}
+            onChange={(e) => handleInputChange('name', e.target.value)}
+          />
+        </div>
+        <div className="form-group">
+          <label>Contact Email *</label>
+          <input
+            type="email"
+            required
+            value={formData.contact_email || ''}
+            onChange={(e) => handleInputChange('contact_email', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label>Contact Phone *</label>
+          <input
+            type="tel"
+            required
+            value={formData.contact_phone || ''}
+            onChange={(e) => handleInputChange('contact_phone', e.target.value)}
+          />
+        </div>
+        <div className="form-group">
+          <label>Website</label>
+          <input
+            type="url"
+            value={formData.website || ''}
+            onChange={(e) => handleInputChange('website', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label>Industry *</label>
+          <input
+            type="text"
+            required
+            value={formData.industry || ''}
+            onChange={(e) => handleInputChange('industry', e.target.value)}
+          />
+        </div>
+        <div className="form-group">
+          <label>Contact Person *</label>
+          <input
+            type="text"
+            required
+            value={formData.contact_person || ''}
+            onChange={(e) => handleInputChange('contact_person', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="form-group full-width">
+        <label>Address *</label>
+        <textarea
+          required
+          value={formData.address || ''}
+          onChange={(e) => handleInputChange('address', e.target.value)}
+          rows="3"
+        />
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label>City *</label>
+          <input
+            type="text"
+            required
+            value={formData.city || ''}
+            onChange={(e) => handleInputChange('city', e.target.value)}
+          />
+        </div>
+        <div className="form-group">
+          <label>Country *</label>
+          <input
+            type="text"
+            required
+            value={formData.country || ''}
+            onChange={(e) => handleInputChange('country', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <button type="submit" className="submit-btn" disabled={loading}>
+        {loading ? 'Registering...' : 'Register Company'}
+      </button>
+    </form>
+  );
+
+  const ExaminerForm = () => (
+    <form onSubmit={handleSubmit} className="registration-form">
+      <div className="form-row">
+        <div className="form-group">
+          <label>First Name *</label>
+          <input
+            type="text"
+            required
+            value={formData.first_name || ''}
+            onChange={(e) => handleInputChange('first_name', e.target.value)}
+          />
+        </div>
+        <div className="form-group">
+          <label>Last Name *</label>
+          <input
+            type="text"
+            required
+            value={formData.last_name || ''}
+            onChange={(e) => handleInputChange('last_name', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label>Phone</label>
+          <input
+            type="tel"
+            value={formData.phone || ''}
+            onChange={(e) => handleInputChange('phone', e.target.value)}
+          />
+        </div>
+        <div className="form-group">
+          <label>Employee ID *</label>
+          <input
+            type="text"
+            required
+            value={formData.employee_id || ''}
+            onChange={(e) => handleInputChange('employee_id', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label>Department *</label>
+          <select
+            required
+            value={formData.department_id || ''}
+            onChange={(e) => handleInputChange('department_id', e.target.value)}
+          >
+            <option value="">Select Department</option>
+            {departments.map(dept => (
+              <option key={dept.id} value={dept.id}>{dept.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label>Qualification *</label>
+          <select
+            required
+            value={formData.qualification || ''}
+            onChange={(e) => handleInputChange('qualification', e.target.value)}
+          >
+            <option value="">Select Qualification</option>
+            <option value="Bachelor's Degree">Bachelor's Degree</option>
+            <option value="Master's Degree">Master's Degree</option>
+            <option value="PhD">PhD</option>
+            <option value="Professor">Professor</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label>Specialization *</label>
+          <input
+            type="text"
+            required
+            value={formData.specialization || ''}
+            onChange={(e) => handleInputChange('specialization', e.target.value)}
+          />
+        </div>
+        <div className="form-group">
+          <label>Experience (Years) *</label>
+          <input
+            type="number"
+            min="0"
+            required
+            value={formData.experience_years || ''}
+            onChange={(e) => handleInputChange('experience_years', e.target.value)}
+          />
+        </div>
+      </div>
+
+      <button type="submit" className="submit-btn" disabled={loading}>
+        {loading ? 'Registering...' : 'Register Examiner'}
+      </button>
+    </form>
+  );
+
+  const AdvisorForm = () => (
+    <form onSubmit={handleSubmit} className="registration-form">
+      {/* Same fields as ExaminerForm plus */}
+      <div className="form-row">
+        <div className="form-group">
+          <label>Advising Specialization *</label>
+          <input
+            type="text"
+            required
+            value={formData.advising_specialization || ''}
+            onChange={(e) => handleInputChange('advising_specialization', e.target.value)}
+          />
+        </div>
+      </div>
+      {/* Include all ExaminerForm fields */}
+      <ExaminerForm />
+    </form>
+  );
+
+  return (
+    <div className="registrations-tab">
+      <h2>📋 User Registrations</h2>
+
+      {/* Registration Type Selector */}
+      <div className="registration-cards">
+        <div
+          className={`reg-card ${activeRegistration === 'student' ? 'active' : ''}`}
+          onClick={() => setActiveRegistration('student')}
+        >
+          <div className="reg-icon">🎓</div>
+          <h3>Register Student</h3>
+          <p>Register new students with auto-generated credentials</p>
+        </div>
+        <div
+          className={`reg-card ${activeRegistration === 'company' ? 'active' : ''}`}
+          onClick={() => setActiveRegistration('company')}
+        >
+          <div className="reg-icon">🏢</div>
+          <h3>Register Company</h3>
+          <p>Register new companies with auto-generated credentials</p>
+        </div>
+        <div
+          className={`reg-card ${activeRegistration === 'examiner' ? 'active' : ''}`}
+          onClick={() => setActiveRegistration('examiner')}
+        >
+          <div className="reg-icon">👨‍🏫</div>
+          <h3>Register Examiner</h3>
+          <p>Register new examiners with auto-generated credentials</p>
+        </div>
+        <div
+          className={`reg-card ${activeRegistration === 'advisor' ? 'active' : ''}`}
+          onClick={() => setActiveRegistration('advisor')}
+        >
+          <div className="reg-icon">👨‍💼</div>
+          <h3>Register Advisor</h3>
+          <p>Register new advisors with auto-generated credentials</p>
+        </div>
+      </div>
+
+      {/* Registration Form */}
+      <div className="registration-content">
+        {activeRegistration === 'student' && <StudentForm />}
+        {activeRegistration === 'company' && <CompanyForm />}
+        {activeRegistration === 'examiner' && <ExaminerForm />}
+        {activeRegistration === 'advisor' && <AdvisorForm />}
+      </div>
+
+      {/* Credentials Modal */}
+      {showCredentials && generatedCredentials && (
+        <div className="credentials-modal-overlay">
+          <div className="credentials-modal">
+            <div className="modal-header">
+              <h3>✅ Registration Successful!</h3>
+              <button
+                className="close-btn"
+                onClick={() => setShowCredentials(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="credentials-panel">
+              <div className="credentials-info">
+                <p><strong>👤 User:</strong> {formData.first_name} {formData.last_name}</p>
+                <p><strong>Role:</strong> {activeRegistration.charAt(0).toUpperCase() + activeRegistration.slice(1)}</p>
+                {formData.department_id && (
+                  <p><strong>Department:</strong> {departments.find(d => d.id == formData.department_id)?.name}</p>
+                )}
+              </div>
+
+              <div className="credentials-display">
+                <h4>🔑 Generated Credentials:</h4>
+                <div className="credentials-box">
+                  <div className="credential-item">
+                    <label>Email:</label>
+                    <div className="credential-value">
+                      <span>{generatedCredentials.email}</span>
+                      <button onClick={() => copyToClipboard(generatedCredentials.email)}>📋</button>
+                    </div>
+                  </div>
+                  <div className="credential-item">
+                    <label>Password:</label>
+                    <div className="credential-value">
+                      <span>{generatedCredentials.password}</span>
+                      <button onClick={() => copyToClipboard(generatedCredentials.password)}>📋</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="credentials-warning">
+                <p>⚠️ Password expires in: {generatedCredentials.expires_in_days} days</p>
+              </div>
+
+              <div className="credentials-actions">
+                <button className="action-btn email" onClick={() => alert('Email functionality coming soon!')}>
+                  📧 Send Email
+                </button>
+                <button className="action-btn download" onClick={downloadCredentials}>
+                  📥 Download
+                </button>
+                <button className="action-btn print" onClick={printCredentials}>
+                  🖨 Print
+                </button>
+                <button className="action-btn copy-all" onClick={() => copyToClipboard(
+                  `Email: ${generatedCredentials.email}\nPassword: ${generatedCredentials.password}`
+                )}>
+                  📋 Copy All
+                </button>
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  className="secondary-btn"
+                  onClick={() => {
+                    setShowCredentials(false);
+                    setGeneratedCredentials(null);
+                  }}
+                >
+                  Close
+                </button>
+                <button
+                  className="primary-btn"
+                  onClick={() => {
+                    setShowCredentials(false);
+                    setGeneratedCredentials(null);
+                    setFormData({});
+                  }}
+                >
+                  Register Another
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default RegistrationsTab;
