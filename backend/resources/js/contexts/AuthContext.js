@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { authAPI } from '../services/api';
+import { authAPI } from '../services/http';
 
 const AuthContext = createContext();
 const INVALID_STORED_TOKENS = new Set(['', 'null', 'undefined']);

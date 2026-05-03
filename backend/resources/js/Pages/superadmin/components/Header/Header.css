@@ -3,7 +3,7 @@
 /* ============================================ */
 
 /* Import global header styles */
-@import '../../../header.css';
+@import '../../../../styles/Header.css';
 
 /* Dashboard-specific header overrides */
 .sa-header {

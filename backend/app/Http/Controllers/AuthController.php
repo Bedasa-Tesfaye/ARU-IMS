@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -69,8 +70,27 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
+        $isInertia = $request->header('X-Inertia');
+
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            if ($isInertia) {
+                return back()->withErrors($validator)->withInput();
+            }
+
+            if ($request->expectsJson()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+
+            return back()->withErrors($validator)->withInput();
+        }
+
+        if ($isInertia || !$request->expectsJson()) {
+            if (Auth::guard('web')->attempt($credentials, $request->boolean('remember'))) {
+                $request->session()->regenerate();
+                return redirect()->intended('/superadmin');
+            }
+
+            return back()->withErrors(['email' => 'Invalid credentials'])->withInput();
         }
 
         if (!$token = JWTAuth::attempt($credentials)) {
@@ -90,9 +110,18 @@ class AuthController extends Controller
         ]);
     }
 
-    public function logout()
+    public function logout(Request $request)
     {
-        JWTAuth::invalidate(JWTAuth::getToken());
+        if (Auth::guard('web')->check()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            return redirect('/login');
+        }
+
+        if (JWTAuth::getToken()) {
+            JWTAuth::invalidate(JWTAuth::getToken());
+        }
 
         return response()->json(['message' => 'Successfully logged out']);
     }
