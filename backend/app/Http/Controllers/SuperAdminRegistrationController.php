@@ -2,18 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AdminAuditLog;
 use App\Models\Company;
 use App\Models\Department;
 use App\Models\User;
+use App\Services\CredentialService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class SuperAdminRegistrationController extends Controller
 {
+    public function __construct(private readonly CredentialService $credentialService)
+    {
+    }
+
     public function departments(Request $request)
     {
         $this->ensureSuperAdmin($request);
@@ -48,7 +53,6 @@ class SuperAdminRegistrationController extends Controller
                 'year' => (int) $validated['year'],
                 'cgpa' => (float) $validated['cgpa'],
             ],
-            emailSeed: $validated['student_id'],
             studentId: $validated['student_id']
         );
 
@@ -93,7 +97,6 @@ class SuperAdminRegistrationController extends Controller
                         'year' => (int) $student['year'],
                         'cgpa' => (float) $student['cgpa'],
                     ],
-                    emailSeed: $student['student_id'],
                     studentId: $student['student_id']
                 );
 
@@ -128,7 +131,7 @@ class SuperAdminRegistrationController extends Controller
             'building' => 'nullable|string|max:100',
             'po_box' => 'nullable|string|max:100',
             'website' => 'nullable|url|max:255',
-            'company_email' => 'required|email|max:255',
+            'company_email' => 'nullable|email|max:255',
             'field_of_interest' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
             'contact_person' => 'required|string|max:255',
@@ -149,6 +152,7 @@ class SuperAdminRegistrationController extends Controller
             'contact_person' => $validated['contact_person'],
             'contact_email' => $validated['company_email'] ?? null,
             'contact_phone' => $validated['phone'],
+            'is_verified' => true,
             'meta' => [
                 'state' => $validated['state'],
                 'po_box' => $validated['po_box'] ?? null,
@@ -168,7 +172,9 @@ class SuperAdminRegistrationController extends Controller
                 'field_of_interest' => $validated['field_of_interest'],
                 'company_email' => $validated['company_email'] ?? null,
             ],
-            emailSeed: $validated['company_name']
+            companyName: $validated['company_name'],
+            website: $validated['website'] ?? null,
+            preferredEmail: $validated['company_email'] ?? null
         );
 
         return response()->json([
@@ -297,17 +303,315 @@ class SuperAdminRegistrationController extends Controller
     {
         $this->ensureSuperAdmin($request);
         $user = User::query()->findOrFail($id);
+        $policy = $this->credentialService->getPolicy();
+        $plainPassword = $this->credentialService->generatePassword($policy);
+        $user->update([
+            'password' => Hash::make($plainPassword, ['rounds' => 12]),
+            'password_changed_at' => now(),
+            'password_expires_at' => now()->addDays((int) $policy->password_expiry_days),
+            'must_change_password' => (bool) $policy->force_password_change,
+        ]);
 
-        $plainPassword = $this->generatePassword();
-        $user->update(['password' => Hash::make($plainPassword)]);
+        $this->logAudit($request, 'credentials', 'reset_password', 'warning', "Password reset for {$user->email}", [
+            'user_id' => $user->id,
+            'email' => $user->email,
+        ], $user->id);
 
         return response()->json([
             'message' => 'Password reset successfully.',
             'credentials' => [
+                'name' => $user->full_name,
                 'email' => $user->email,
                 'password' => $plainPassword,
+                'password_expires_at' => optional($user->password_expires_at)->toIso8601String(),
             ],
         ]);
+    }
+
+    public function getApprovalsSummary(Request $request)
+    {
+        $this->ensureSuperAdmin($request);
+
+        $pendingPartners = Company::query()->where('is_verified', false)->count();
+        $pendingInternships = \App\Models\Internship::query()
+            ->whereIn('submission_status', ['pending', 'improvement'])
+            ->count();
+
+        return response()->json([
+            'pending_partners' => $pendingPartners,
+            'pending_internships' => $pendingInternships,
+            'total_pending' => $pendingPartners + $pendingInternships,
+        ]);
+    }
+
+    public function getPartnerRequests(Request $request)
+    {
+        $this->ensureSuperAdmin($request);
+
+        $status = $request->query('status', 'pending');
+        $query = Company::query()->orderByDesc('id');
+        if ($status === 'pending') {
+            $query->where('is_verified', false);
+        }
+        if ($status === 'approved') {
+            $query->where('is_verified', true);
+        }
+
+        $records = $query->paginate(12);
+        $records->getCollection()->transform(function (Company $company) {
+            return [
+                'id' => $company->id,
+                'company_name' => $company->name,
+                'company_email' => $company->contact_email,
+                'contact_person' => $company->contact_person,
+                'phone' => $company->contact_phone,
+                'website' => $company->website,
+                'city' => $company->city,
+                'state' => $company->meta['state'] ?? null,
+                'country_region' => $company->country,
+                'field_of_interest' => $company->industry,
+                'status' => $company->is_verified ? 'approved' : 'pending',
+                'created_at' => optional($company->created_at)->toIso8601String(),
+            ];
+        });
+
+        return response()->json($records);
+    }
+
+    public function approvePartnerRequest(Request $request, int $id)
+    {
+        $this->ensureSuperAdmin($request);
+        $company = Company::query()->findOrFail($id);
+        $policy = $this->credentialService->getPolicy();
+
+        $company->is_verified = true;
+        $company->save();
+
+        $existingUser = User::query()
+            ->where('company_id', $company->id)
+            ->where('role', 'company')
+            ->first();
+
+        $plainPassword = null;
+        $user = $existingUser;
+        if (!$existingUser) {
+            [$user, $plainPassword] = $this->createUserWithGeneratedCredentials(
+                role: 'company',
+                fullName: $company->contact_person ?: $company->name,
+                phone: $company->contact_phone,
+                companyId: $company->id,
+                profileData: [
+                    'company_name' => $company->name,
+                    'field_of_interest' => $company->industry,
+                    'approval_notes' => (string) $request->input('notes', ''),
+                ],
+                companyName: $company->name,
+                website: $company->website,
+                preferredEmail: $company->contact_email
+            );
+        }
+
+        $this->logAudit($request, 'approvals', 'approve_partner', 'info', "Partner approved: {$company->name}", [
+            'company_id' => $company->id,
+            'generated_credentials' => $plainPassword !== null,
+        ], $user?->id);
+
+        return response()->json([
+            'message' => 'Partner request approved successfully.',
+            'company' => $company,
+            'credentials' => $plainPassword ? [
+                'name' => $user->full_name,
+                'email' => $user->email,
+                'password' => $plainPassword,
+                'password_expires_at' => now()->addDays((int) $policy->password_expiry_days)->toIso8601String(),
+            ] : null,
+        ]);
+    }
+
+    public function rejectPartnerRequest(Request $request, int $id)
+    {
+        $this->ensureSuperAdmin($request);
+        $company = Company::query()->findOrFail($id);
+
+        $validated = Validator::make($request->all(), [
+            'reason' => 'required|string|max:500',
+        ])->validate();
+
+        $meta = is_array($company->meta) ? $company->meta : [];
+        $meta['rejected_reason'] = $validated['reason'];
+        $meta['rejected_at'] = now()->toIso8601String();
+        $company->meta = $meta;
+        $company->save();
+
+        $this->logAudit($request, 'approvals', 'reject_partner', 'warning', "Partner rejected: {$company->name}", [
+            'company_id' => $company->id,
+            'reason' => $validated['reason'],
+        ]);
+
+        return response()->json(['message' => 'Partner request rejected successfully.']);
+    }
+
+    public function generateCredentialPreview(Request $request)
+    {
+        $this->ensureSuperAdmin($request);
+        $validated = Validator::make($request->all(), [
+            'full_name' => 'required|string|max:255',
+            'role' => 'required|string|max:50',
+            'company_name' => 'nullable|string|max:255',
+            'website' => 'nullable|string|max:255',
+        ])->validate();
+
+        $email = $validated['role'] === 'company'
+            ? $this->credentialService->generateCompanyEmail(
+                $validated['company_name'] ?? $validated['full_name'],
+                $validated['website'] ?? null
+            )
+            : $this->credentialService->generateUserEmail($validated['full_name']);
+
+        $password = $this->credentialService->generatePassword();
+
+        return response()->json([
+            'email' => $email,
+            'password' => $password,
+        ]);
+    }
+
+    public function generateBulkCredentials(Request $request)
+    {
+        $this->ensureSuperAdmin($request);
+        $validated = Validator::make($request->all(), [
+            'records' => 'required|array|min:1',
+            'records.*.full_name' => 'required|string|max:255',
+            'records.*.role' => 'required|string|max:50',
+        ])->validate();
+
+        $emails = [];
+        $results = [];
+        foreach ($validated['records'] as $index => $record) {
+            $email = $record['role'] === 'company'
+                ? $this->credentialService->generateCompanyEmail($record['full_name'], null, $emails)
+                : $this->credentialService->generateUserEmail($record['full_name'], $emails);
+            $emails[] = $email;
+            $results[] = [
+                'row' => $index + 1,
+                'full_name' => $record['full_name'],
+                'role' => $record['role'],
+                'email' => $email,
+                'password' => $this->credentialService->generatePassword(),
+            ];
+        }
+
+        return response()->json([
+            'count' => count($results),
+            'credentials' => $results,
+        ]);
+    }
+
+    public function checkEmailAvailability(Request $request)
+    {
+        $this->ensureSuperAdmin($request);
+        $email = strtolower((string) $request->query('email', ''));
+        abort_if($email === '', 422, 'Email query is required.');
+
+        return response()->json([
+            'email' => $email,
+            'available' => !User::query()->where('email', $email)->exists(),
+        ]);
+    }
+
+    public function credentialsExpiryReport(Request $request)
+    {
+        $this->ensureSuperAdmin($request);
+        $days = max(1, (int) $request->query('days', 14));
+        $now = now();
+        $until = now()->addDays($days);
+
+        $expiringSoon = User::query()
+            ->whereNotNull('password_expires_at')
+            ->whereBetween('password_expires_at', [$now, $until])
+            ->orderBy('password_expires_at')
+            ->get(['id', 'first_name', 'last_name', 'email', 'role', 'password_expires_at']);
+
+        return response()->json([
+            'window_days' => $days,
+            'count' => $expiringSoon->count(),
+            'users' => $expiringSoon,
+        ]);
+    }
+
+    public function getCredentialPolicy(Request $request)
+    {
+        $this->ensureSuperAdmin($request);
+        return response()->json($this->credentialService->getPolicy());
+    }
+
+    public function updateCredentialPolicy(Request $request)
+    {
+        $this->ensureSuperAdmin($request);
+        $policy = $this->credentialService->getPolicy();
+
+        $validated = Validator::make($request->all(), [
+            'password_length' => 'nullable|integer|min:8|max:20',
+            'require_uppercase' => 'nullable|boolean',
+            'require_lowercase' => 'nullable|boolean',
+            'require_numbers' => 'nullable|boolean',
+            'require_special' => 'nullable|boolean',
+            'minimum_numbers' => 'nullable|integer|min:1|max:5',
+            'minimum_special' => 'nullable|integer|min:1|max:5',
+            'password_expiry_days' => 'nullable|integer|min:0|max:365',
+            'force_password_change' => 'nullable|boolean',
+            'user_email_domain' => 'nullable|string|max:120',
+            'partner_email_domain' => 'nullable|string|max:120',
+            'auto_send_welcome_email' => 'nullable|boolean',
+            'duplicate_strategy' => 'nullable|string|in:increment_suffix',
+            'failed_login_limit' => 'nullable|integer|min:3|max:10',
+            'lockout_minutes' => 'nullable|integer|min:5|max:120',
+        ])->validate();
+
+        $policy->update($validated);
+        $this->logAudit($request, 'settings', 'update_credential_policy', 'info', 'Credential policy updated.', $validated);
+
+        return response()->json([
+            'message' => 'Credential policy updated successfully.',
+            'policy' => $policy->fresh(),
+        ]);
+    }
+
+    public function sendCredentialsEmail(Request $request)
+    {
+        $this->ensureSuperAdmin($request);
+        $validated = Validator::make($request->all(), [
+            'email' => 'required|email|max:255',
+            'name' => 'required|string|max:255',
+            'password' => 'required|string|max:64',
+        ])->validate();
+
+        $this->logAudit($request, 'credentials', 'send_email', 'info', "Credential email dispatch requested for {$validated['email']}", [
+            'recipient' => $validated['email'],
+        ]);
+
+        return response()->json([
+            'message' => 'Credential email queued successfully.',
+            'queued' => true,
+        ]);
+    }
+
+    public function getAuditLogs(Request $request)
+    {
+        $this->ensureSuperAdmin($request);
+
+        $query = AdminAuditLog::query()->orderByDesc('id');
+        if ($request->filled('module')) {
+            $query->where('module', $request->query('module'));
+        }
+        if ($request->filled('severity')) {
+            $query->where('severity', $request->query('severity'));
+        }
+        if ($request->filled('action')) {
+            $query->where('action', 'like', '%' . $request->query('action') . '%');
+        }
+
+        return response()->json($query->paginate(30));
     }
 
     private function registerAcademicStaff(Request $request, string $role)
@@ -342,7 +646,6 @@ class SuperAdminRegistrationController extends Controller
                 'field_of_specialization' => $validated['field_of_specialization'],
                 'years_of_experience' => (int) $validated['years_of_experience'],
             ],
-            emailSeed: $validated['employee_id'],
             employeeId: $validated['employee_id']
         );
 
@@ -364,19 +667,31 @@ class SuperAdminRegistrationController extends Controller
         ?int $departmentId = null,
         ?int $companyId = null,
         array $profileData = [],
-        ?string $emailSeed = null,
         ?string $studentId = null,
-        ?string $employeeId = null
+        ?string $employeeId = null,
+        ?string $companyName = null,
+        ?string $website = null,
+        ?string $preferredEmail = null
     ): array {
         [$firstName, $lastName] = $this->splitFullName($fullName);
-        $email = $this->generateUniqueEmail($emailSeed ?: $fullName, $role);
-        $plainPassword = $this->generatePassword();
+        $policy = $this->credentialService->getPolicy();
+        $email = $preferredEmail && !User::query()->where('email', strtolower($preferredEmail))->exists()
+            ? strtolower($preferredEmail)
+            : (
+                $role === 'company'
+                    ? $this->credentialService->generateCompanyEmail($companyName ?: $fullName, $website)
+                    : $this->credentialService->generateUserEmail($fullName)
+            );
+        $plainPassword = $this->credentialService->generatePassword($policy);
 
         $user = User::create([
             'first_name' => $firstName,
             'last_name' => $lastName,
             'email' => $email,
-            'password' => Hash::make($plainPassword),
+            'password' => Hash::make($plainPassword, ['rounds' => 12]),
+            'password_changed_at' => now(),
+            'password_expires_at' => now()->addDays((int) $policy->password_expiry_days),
+            'must_change_password' => (bool) $policy->force_password_change,
             'phone' => $phone,
             'address' => null,
             'department_id' => $departmentId,
@@ -386,6 +701,11 @@ class SuperAdminRegistrationController extends Controller
             'role' => $role,
             'profile_data' => $profileData,
         ]);
+
+        $this->logAudit(request(), 'credentials', 'generate', 'info', "Credentials generated for {$user->email}", [
+            'role' => $role,
+            'password_expiry_days' => (int) $policy->password_expiry_days,
+        ], $user->id);
 
         return [$user, $plainPassword];
     }
@@ -399,35 +719,27 @@ class SuperAdminRegistrationController extends Controller
         return [$firstName, $lastName];
     }
 
-    private function generateUniqueEmail(string $seed, string $role): string
-    {
-        $baseLocalPart = Str::slug($seed ?: $role, '.');
-        if ($baseLocalPart === '') {
-            $baseLocalPart = $role;
-        }
-
-        $baseLocalPart = Str::limit($baseLocalPart, 32, '');
-        $counter = 1;
-
-        do {
-            $suffix = $counter === 1 ? '' : ".{$counter}";
-            $email = "{$baseLocalPart}{$suffix}@aruims.local";
-            $counter++;
-        } while (User::where('email', $email)->exists());
-
-        return $email;
-    }
-
-    private function generatePassword(int $length = 12): string
-    {
-        return Str::password($length, true, true, true, false);
-    }
-
     private function ensureSuperAdmin(Request $request): void
     {
         $user = auth()->user();
 
         abort_unless($user && $user->role === 'super_admin', 403, 'Only super admins can register actors.');
+    }
+
+    private function logAudit(Request $request, string $module, string $action, string $severity, string $description, array $meta = [], ?int $targetUserId = null): void
+    {
+        AdminAuditLog::query()->create([
+            'actor_user_id' => auth()->id(),
+            'target_user_id' => $targetUserId,
+            'module' => $module,
+            'action' => $action,
+            'severity' => $severity,
+            'description' => $description,
+            'ip_address' => $request->ip(),
+            'user_agent' => (string) $request->userAgent(),
+            'meta' => $meta,
+            'created_at' => now(),
+        ]);
     }
 }
 

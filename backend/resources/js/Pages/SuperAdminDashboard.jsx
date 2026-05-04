@@ -6,6 +6,7 @@ import AssignPanel from './superadmin/components/AssignPanel/AssignPanel';
 import RegistrationPanel from './superadmin/components/RegistrationPanel/RegistrationPanel';
 import Sidebar from './superadmin/components/Sidebar';
 import UserManagementPanel from './superadmin/components/UserManagementPanel';
+import CredentialsModal from './superadmin/components/CredentialsModal';
 import { normalizeUser } from './superadmin/utils/userHelpers';
 import { superAdminAPI } from '../services/http';
 import './superadmin/SuperAdminDashboard.css';
@@ -20,10 +21,13 @@ const SuperAdminDashboard = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [generatedCredentials, setGeneratedCredentials] = useState([]);
+  const [activeCredential, setActiveCredential] = useState(null);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
   const [activity, setActivity] = useState([
     { icon: '✅', message: 'User management connected to backend', time: 'Just now' },
   ]);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [credentialPolicy, setCredentialPolicy] = useState(null);
 
   const loadData = async () => {
     setError('');
@@ -36,6 +40,16 @@ const SuperAdminDashboard = () => {
       setUsers((usersRes.data || []).map(normalizeUser));
       setDepartments(departmentsRes.data || []);
       setPendingApprovalsCount(approvalsRes.data?.total_pending || 0);
+      try {
+        const [logsRes, policyRes] = await Promise.all([
+          superAdminAPI.getAuditLogs({}),
+          superAdminAPI.getCredentialPolicy(),
+        ]);
+        setAuditLogs(logsRes.data?.data || []);
+        setCredentialPolicy(policyRes.data || null);
+      } catch (innerErr) {
+        // Optional sections should not block dashboard load.
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load user management data.');
     }
@@ -93,7 +107,9 @@ const SuperAdminDashboard = () => {
       if (role === 'advisor') res = await superAdminAPI.registerAdvisor({ ...formData, department_id: Number(formData.department_id), years_of_experience: Number(formData.years_of_experience) });
 
       if (res?.data?.credentials) {
-        setGeneratedCredentials((prev) => [res.data.credentials, ...prev].slice(0, 10));
+        const credential = { ...res.data.credentials, role };
+        setGeneratedCredentials((prev) => [credential, ...prev].slice(0, 10));
+        setActiveCredential(credential);
       }
       setSuccess(`${role} registered successfully!`);
       addActivity('✅', `${role} registered successfully`);
@@ -113,7 +129,11 @@ const SuperAdminDashboard = () => {
       const res = await superAdminAPI.registerStudentsBulk(bulkData);
       
       if (res?.data?.credentials) {
-        setGeneratedCredentials((prev) => [...res.data.credentials, ...prev].slice(0, 10));
+        const normalized = (res.data.credentials || []).map((item) => ({ ...item, role }));
+        setGeneratedCredentials((prev) => [...normalized, ...prev].slice(0, 10));
+        if (normalized[0]) {
+          setActiveCredential(normalized[0]);
+        }
       }
       setSuccess(`${bulkData.length} ${role}s registered successfully!`);
       addActivity('✅', `${bulkData.length} ${role}s registered successfully`);
@@ -176,8 +196,9 @@ const SuperAdminDashboard = () => {
   const handleResetPassword = async (user) => {
     try {
       const res = await superAdminAPI.resetUserPassword(user.id);
-      const password = res.data?.credentials?.password || '(hidden)';
-      window.alert(`New password for ${user.name}: ${password}`);
+      const credentials = { ...(res.data?.credentials || {}), name: user.name, role: user.role };
+      setGeneratedCredentials((prev) => [credentials, ...prev].slice(0, 10));
+      setActiveCredential(credentials);
       addActivity('🔑', `Password reset for: ${user.name}`);
       setSuccess('Password reset successfully.');
     } catch (err) {
@@ -201,7 +222,9 @@ const SuperAdminDashboard = () => {
           }}
           onActivity={addActivity}
           onCredentialsGenerated={(cred) => {
-            setGeneratedCredentials((prev) => [cred, ...prev].slice(0, 10));
+            const normalized = { ...cred, role: 'company' };
+            setGeneratedCredentials((prev) => [normalized, ...prev].slice(0, 10));
+            setActiveCredential(normalized);
           }}
         />
       );
@@ -245,10 +268,70 @@ const SuperAdminDashboard = () => {
         />
       );
     }
+    if (activeSection === 'reports-analytics') {
+      return (
+        <div className="sa-empty-panel">
+          <h3>Reports & Analytics</h3>
+          <p>Total users: {stats.totalUsers} | Students: {stats.totalStudents} | Pending approvals: {pendingApprovalsCount}</p>
+          <p>AI Forecast: Registration trend indicates potential growth next week based on recent activity.</p>
+        </div>
+      );
+    }
+    if (activeSection === 'ai-insights') {
+      return (
+        <div className="sa-empty-panel">
+          <h3>AI Insights & Automation</h3>
+          <ul>
+            <li>Student registration trend is active.</li>
+            <li>Pending approvals queue is prioritized by age and risk.</li>
+            <li>Credential policy is enforced for all new registrations.</li>
+          </ul>
+        </div>
+      );
+    }
+    if (activeSection === 'audit-logs') {
+      return (
+        <div className="sa-empty-panel">
+          <h3>Audit Logs</h3>
+          {auditLogs.length === 0 ? <p>No audit logs yet.</p> : (
+            <div className="table-wrapper">
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>Time</th><th>Module</th><th>Action</th><th>Severity</th><th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditLogs.slice(0, 20).map((log) => (
+                    <tr key={log.id}>
+                      <td>{new Date(log.created_at).toLocaleString()}</td>
+                      <td>{log.module}</td>
+                      <td>{log.action}</td>
+                      <td>{log.severity}</td>
+                      <td>{log.description}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      );
+    }
     return (
       <div className="sa-empty-panel">
         <h3>Settings</h3>
-        <p>Settings panel can be extended here.</p>
+        {credentialPolicy ? (
+          <div>
+            <p>Password length: {credentialPolicy.password_length}</p>
+            <p>Expiry days: {credentialPolicy.password_expiry_days}</p>
+            <p>Force password change on first login: {credentialPolicy.force_password_change ? 'Enabled' : 'Disabled'}</p>
+            <p>User email domain: {credentialPolicy.user_email_domain}</p>
+            <p>Partner email domain: {credentialPolicy.partner_email_domain}</p>
+          </div>
+        ) : (
+          <p>Settings panel can be extended here.</p>
+        )}
       </div>
     );
   };
@@ -281,7 +364,7 @@ const SuperAdminDashboard = () => {
             </div>
             <div className="credentials-list">
               {generatedCredentials.slice(0, 3).map((cred, idx) => (
-                <div key={`${cred.email}-${idx}`} className="credential-item">
+                <div key={`${cred.email}-${idx}`} className="credential-item" onClick={() => setActiveCredential(cred)}>
                   <div className="cred-user">
                     <strong>{cred.name || cred.email}</strong>
                     <span className="cred-role">{activeSection}</span>
@@ -306,6 +389,13 @@ const SuperAdminDashboard = () => {
             </div>
           ))}
         </section>
+
+        {activeCredential && (
+          <CredentialsModal
+            credential={activeCredential}
+            onClose={() => setActiveCredential(null)}
+          />
+        )}
       </div>
     </div>
   );

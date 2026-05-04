@@ -87,7 +87,29 @@ class AuthController extends Controller
         if ($isInertia || !$request->expectsJson()) {
             if (Auth::guard('web')->attempt($credentials, $request->boolean('remember'))) {
                 $request->session()->regenerate();
-                return redirect()->intended('/superadmin');
+                $user = Auth::guard('web')->user();
+
+                if ($user && !$user->is_active) {
+                    Auth::guard('web')->logout();
+                    $request->session()->invalidate();
+                    $request->session()->regenerateToken();
+
+                    return back()->withErrors(['email' => 'Account is deactivated'])->withInput();
+                }
+
+                if ($user && $user->role === 'super_admin') {
+                    return redirect('/superadmin');
+                }
+
+                if ($user && $user->role === 'student') {
+                    return redirect('/student-dashboard');
+                }
+
+                if ($user && $user->role === 'examiner') {
+                    return redirect('/examiner-dashboard');
+                }
+
+                return redirect('/');
             }
 
             return back()->withErrors(['email' => 'Invalid credentials'])->withInput();

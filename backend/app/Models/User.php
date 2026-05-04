@@ -18,6 +18,9 @@ class User extends Authenticatable implements JWTSubject
         'last_name',
         'email',
         'password',
+        'password_expires_at',
+        'password_changed_at',
+        'must_change_password',
         'phone',
         'address',
         'department_id',
@@ -36,6 +39,9 @@ class User extends Authenticatable implements JWTSubject
 
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'password_expires_at' => 'datetime',
+        'password_changed_at' => 'datetime',
+        'must_change_password' => 'boolean',
         'is_active' => 'boolean',
         'profile_data' => 'array',
     ];

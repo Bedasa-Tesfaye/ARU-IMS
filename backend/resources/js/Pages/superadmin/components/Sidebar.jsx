@@ -43,6 +43,21 @@ const Sidebar = ({ activeSection, setActiveSection, sidebarOpen, setSidebarOpen,
       ],
     },
     {
+      id: 'reports-analytics',
+      label: 'Reports & Analytics',
+      icon: '📈',
+    },
+    {
+      id: 'ai-insights',
+      label: 'AI Insights & Automation',
+      icon: '🤖',
+    },
+    {
+      id: 'audit-logs',
+      label: 'Audit Logs',
+      icon: '📋',
+    },
+    {
       id: 'settings',
       label: 'Settings',
       icon: '⚙️',
