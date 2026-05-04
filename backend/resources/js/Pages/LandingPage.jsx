@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from '@inertiajs/react';
 import ChatBotWidget from '../Components/ChatBotWidget';
 import './LandingPage.css';
 
@@ -46,6 +45,7 @@ const LandingPage = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showHeroVideo, setShowHeroVideo] = useState(false);
 
   const scrollToSection = (sectionId) => {
     setIsMobileMenuOpen(false);
@@ -123,9 +123,14 @@ const LandingPage = () => {
     const revealElements = document.querySelectorAll('.reveal');
     revealElements.forEach((el) => observer.observe(el));
 
+    const videoTimer = window.setTimeout(() => {
+      setShowHeroVideo(true);
+    }, 400);
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
       revealElements.forEach((el) => observer.unobserve(el));
+      window.clearTimeout(videoTimer);
     };
   }, []);
 
@@ -184,12 +189,8 @@ const LandingPage = () => {
             <a href="#how-it-works" onClick={(e) => { e.preventDefault(); scrollToSection('how-it-works'); }}>Process</a>
             <a href="#testimonials" onClick={(e) => { e.preventDefault(); scrollToSection('testimonials'); }}>Stories</a>
             <div className="nav-divider"></div>
-            <Link href="/login" className="btn-login-ghost">Sign In</Link>
+            <a href="/login" className="btn-login-ghost">Sign In</a>
           </div>
-
-          <button className={`mobile-menu-btn ${isMobileMenuOpen ? 'open' : ''}`} onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label="Toggle Menu">
-            <span></span><span></span><span></span>
-          </button>
         </div>
       </nav>
 
@@ -203,16 +204,20 @@ const LandingPage = () => {
           <a href="#testimonials" onClick={(e) => { e.preventDefault(); scrollToSection('testimonials'); }}>Stories</a>
           <a href="#contact" onClick={(e) => { e.preventDefault(); scrollToSection('contact'); }}>Contact</a>
           <hr className="mobile-divider" />
-          <Link href="/login" className="btn-secondary full-width">Sign In</Link>
+          <a href="/login" className="btn-secondary full-width">Sign In</a>
         </div>
       </div>
 
       {/* HERO SECTION */}
       <section id="home" className="hero">
         <div className="hero-video-bg">
-          <video autoPlay loop muted playsInline className="hero-video">
-            <source src={heroVideo} type="video/mp4" />
-          </video>
+          {showHeroVideo ? (
+            <video autoPlay loop muted playsInline preload="metadata" className="hero-video">
+              <source src={heroVideo} type="video/mp4" />
+            </video>
+          ) : (
+            <div className="hero-video-fallback" />
+          )}
           <div className="hero-overlay"></div>
         </div>
         <div className="container">
@@ -225,7 +230,7 @@ const LandingPage = () => {
             <p className="hero-description">A premium digital ecosystem orchestrating internship placements, real-time progress tracking, evaluations, and seamless stakeholder communication.</p>
             <div className="hero-buttons">
               <a href="#features" onClick={(e) => { e.preventDefault(); scrollToSection('features'); }} className="btn-primary btn-large magnetic">Explore Features <span>→</span></a>
-              <Link href="/login" className="btn-secondary btn-large">Portal Access</Link>
+              <a href="/login" className="btn-secondary btn-large">Portal Access</a>
             </div>
             <div className="stats reveal delay-2">
               <div className="stat glass-panel"><AnimatedCounter end={500} suffix="+" /><p>Placements</p></div>
@@ -234,17 +239,14 @@ const LandingPage = () => {
             </div>
           </div>
           <div className="hero-image reveal delay-1">
-            <div className="preview-parallax parallax-element" style={{ transform: `rotateX(${mousePos.y}deg) rotateY(${-mousePos.x}deg)` }}>
-              <div className="preview-glow"></div>
-              <div className="preview-top-bar">
-                <div className="window-dots"><span></span><span></span><span></span></div>
-                <div className="window-title">Internship Portal</div>
-              </div>
-              <div className="preview-header"><span className="pulse-dot"></span> System Active</div>
-              <div className="preview-content">
-                <div className="preview-item skeleton-load"><div className="sk-icon"></div><div className="sk-text"><div className="sk-line w-100"></div><div className="sk-line w-60"></div></div></div>
-                <div className="preview-item">📝 Application Submitted</div>
-                <div className="preview-item">⭐ Company Partnership</div>
+            <div className="hero-video-card parallax-element" style={{ transform: `rotateX(${mousePos.y}deg) rotateY(${-mousePos.x}deg)` }}>
+              <video autoPlay loop muted playsInline preload="metadata" className="hero-preview-video">
+                <source src={heroVideo} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+              <div className="hero-video-card-overlay">
+                <span className="hero-video-badge">Live Demo</span>
+                <p>Watch the internship portal in action</p>
               </div>
             </div>
           </div>
@@ -506,7 +508,7 @@ const LandingPage = () => {
           <div className="cta-buttons">
             <a href="mailto:support@aru.edu.et" className="btn-primary btn-large">Contact Support</a>
             <span className="cta-or">or</span>
-            <Link href="/login" className="btn-login-ghost ghost-light">Access Portal</Link>
+            <a href="/login" className="btn-login-ghost ghost-light">Access Portal</a>
           </div>
           <span className="cta-badge">🎓 Free for Students</span>
         </div>

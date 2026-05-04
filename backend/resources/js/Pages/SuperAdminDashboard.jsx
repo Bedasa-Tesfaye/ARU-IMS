@@ -7,6 +7,7 @@ import RegistrationPanel from './superadmin/components/RegistrationPanel/Registr
 import Sidebar from './superadmin/components/Sidebar';
 import UserManagementPanel from './superadmin/components/UserManagementPanel';
 import { normalizeUser } from './superadmin/utils/userHelpers';
+import { superAdminAPI } from '../services/http';
 import './superadmin/SuperAdminDashboard.css';
 
 const SuperAdminDashboard = () => {

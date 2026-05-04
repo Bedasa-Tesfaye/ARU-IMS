@@ -27,8 +27,12 @@ const Header = ({
   const [showQuickActions, setShowQuickActions] = useState(false);
   const [aiBriefingData, setAiBriefingData] = useState(null);
   const [recentSearches, setRecentSearches] = useState(() => {
-    const saved = localStorage.getItem('aru_recent_searches');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('aru_recent_searches');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
   });
   const [searchSuggestions, setSearchSuggestions] = useState([]);
   
@@ -36,14 +40,16 @@ const Header = ({
   const notificationRef = useRef(null);
   const profileRef = useRef(null);
   const briefingRef = useRef(null);
+  const statusPanelRef = useRef(null);
+  const quickActionsRef = useRef(null);
   const searchTimeoutRef = useRef(null);
 
-  // Keyboard shortcut: Ctrl+K for search
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        searchRef.current?.focus();
+        searchRef.current?.querySelector('input')?.focus();
       }
       if (e.key === 'Escape') {
         setShowNotifications(false);
@@ -51,6 +57,7 @@ const Header = ({
         setShowAIBriefing(false);
         setShowStatusPanel(false);
         setShowQuickActions(false);
+        setSearchFocused(false);
       }
     };
     document.addEventListener('keydown', handleKeyDown);
@@ -68,6 +75,12 @@ const Header = ({
       }
       if (briefingRef.current && !briefingRef.current.contains(e.target)) {
         setShowAIBriefing(false);
+      }
+      if (statusPanelRef.current && !statusPanelRef.current.contains(e.target)) {
+        setShowStatusPanel(false);
+      }
+      if (quickActionsRef.current && !quickActionsRef.current.contains(e.target)) {
+        setShowQuickActions(false);
       }
       if (searchRef.current && !searchRef.current.contains(e.target)) {
         setSearchFocused(false);
@@ -141,7 +154,6 @@ const Header = ({
   };
 
   const generateSearchSuggestions = (query) => {
-    // AI-powered search suggestions based on query
     const lowerQuery = query.toLowerCase();
     const suggestions = [];
     
@@ -156,9 +168,7 @@ const Header = ({
 
     patterns.forEach(pattern => {
       const matches = pattern.keywords.some(keyword => lowerQuery.includes(keyword));
-      if (matches) {
-        suggestions.push(pattern.suggestion);
-      }
+      if (matches) suggestions.push(pattern.suggestion);
     });
 
     if (suggestions.length === 0) {
@@ -173,15 +183,11 @@ const Header = ({
   const executeSearch = (suggestion) => {
     const query = searchQuery || suggestion;
     
-    // Save to recent searches
     const updated = [query, ...recentSearches.filter(s => s !== query)].slice(0, 5);
     setRecentSearches(updated);
     localStorage.setItem('aru_recent_searches', JSON.stringify(updated));
 
-    // Execute search
-    if (onSearch) {
-      onSearch(query);
-    }
+    if (onSearch) onSearch(query);
 
     setSearchQuery('');
     setSearchFocused(false);
@@ -189,16 +195,13 @@ const Header = ({
   };
 
   const handleNotificationClick = (notification) => {
-    if (onNotificationClick) {
-      onNotificationClick(notification);
-    }
+    if (onNotificationClick) onNotificationClick(notification);
     setShowNotifications(false);
   };
 
-  const handleAIBriefing = async () => {
+  const handleAIBriefing = () => {
     setShowAIBriefing(!showAIBriefing);
     if (!aiBriefingData) {
-      // Generate AI briefing data
       const briefing = {
         date: new Date(),
         totalUsers: 156,
@@ -215,9 +218,7 @@ const Header = ({
         ]
       };
       setAiBriefingData(briefing);
-      if (onAIBriefing) {
-        onAIBriefing(briefing);
-      }
+      if (onAIBriefing) onAIBriefing(briefing);
     }
   };
 
@@ -266,26 +267,46 @@ const Header = ({
   return (
     <>
       <header className="sa-header">
-        <div className="header-left">
-          <button 
-            className="sidebar-toggle" 
-            onClick={onToggleSidebar}
-            aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
-            title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
-          >
-            <span className="toggle-icon">{sidebarOpen ? '✕' : '☰'}</span>
-          </button>
-          
-          <div className="header-title">
-            <div className="title-icon">{getSectionIcon()}</div>
-            <div className="title-text">
-              <h1>{getSectionTitle()}</h1>
-              <p>Manage and monitor your internship ecosystem</p>
+        {/* ============================================ */}
+        {/* TOP ROW: TITLE + TIME                        */}
+        {/* ============================================ */}
+        <div className="header-main">
+          {/* Left: Sidebar Toggle + Title */}
+          <div className="header-left">
+            <button 
+              className="sidebar-toggle" 
+              onClick={onToggleSidebar}
+              aria-label={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+              title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+            >
+              <span className="toggle-icon">{sidebarOpen ? '✕' : '☰'}</span>
+            </button>
+            
+            <div className="header-title">
+              <div className="title-icon">{getSectionIcon()}</div>
+              <div className="title-text">
+                <h1>{getSectionTitle()}</h1>
+                <p>Manage and monitor your internship ecosystem</p>
+              </div>
             </div>
+          </div>
+
+          {/* Right: Time Display */}
+          <div className="header-time">
+            <span className="time-value">
+              {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </span>
+            <span className="time-date">
+              {currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
           </div>
         </div>
 
-        <div className="header-center">
+        {/* ============================================ */}
+        {/* BOTTOM ROW: TOOLBAR                          */}
+        {/* ============================================ */}
+        <div className="header-toolbar">
+          {/* Global Search */}
           <div className={`global-search ${searchFocused ? 'focused' : ''}`} ref={searchRef}>
             <span className="search-icon">🔍</span>
             <input
@@ -295,20 +316,18 @@ const Header = ({
               onChange={handleSearch}
               onFocus={() => setSearchFocused(true)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && searchQuery) {
-                  executeSearch();
-                }
+                if (e.key === 'Enter' && searchQuery) executeSearch();
               }}
               aria-label="Global search"
             />
             <span className="search-shortcut">⌘K</span>
 
-            {/* Search Suggestions Dropdown */}
+            {/* Search Dropdown */}
             {searchFocused && (searchSuggestions.length > 0 || recentSearches.length > 0 || searchQuery) && (
               <div className="search-dropdown">
                 {searchQuery && searchSuggestions.length > 0 && (
                   <div className="search-section">
-                    <div className="section-label">AI Suggestions</div>
+                    <span className="section-label">AI Suggestions</span>
                     {searchSuggestions.map((suggestion, index) => (
                       <button
                         key={index}
@@ -324,7 +343,7 @@ const Header = ({
 
                 {recentSearches.length > 0 && (
                   <div className="search-section">
-                    <div className="section-label">Recent Searches</div>
+                    <span className="section-label">Recent Searches</span>
                     {recentSearches.map((search, index) => (
                       <button
                         key={index}
@@ -353,7 +372,7 @@ const Header = ({
 
                 {!searchQuery && searchSuggestions.length === 0 && recentSearches.length === 0 && (
                   <div className="search-section">
-                    <div className="section-label">Quick Searches</div>
+                    <span className="section-label">Quick Searches</span>
                     <button className="search-item" onClick={() => executeSearch('Show pending approvals')}>
                       <span className="item-icon">⏳</span>
                       <span>Show pending approvals</span>
@@ -371,290 +390,285 @@ const Header = ({
               </div>
             )}
           </div>
-        </div>
 
-        <div className="header-right">
-          {/* System Status Indicator */}
-          <div 
-            className="system-status-wrapper"
-            ref={el => el && (el.onclick = () => setShowStatusPanel(!showStatusPanel))}
-          >
-            <button className="system-status-btn" title="System Status">
-              <span className={`status-dot ${getSystemOverallStatus()}`}></span>
-            </button>
+          {/* Right Side Icons */}
+          <div className="header-right">
+            {/* System Status */}
+            <div className="system-status-wrapper" ref={statusPanelRef}>
+              <button 
+                className="system-status-btn" 
+                title="System Status"
+                onClick={() => setShowStatusPanel(!showStatusPanel)}
+              >
+                <span className={`status-dot ${getSystemOverallStatus()}`}></span>
+              </button>
 
-            {showStatusPanel && (
-              <div className="status-panel">
-                <div className="status-header">
-                  <h3>System Health</h3>
-                  <span className={`status-badge ${getSystemOverallStatus()}`}>
-                    {getSystemOverallStatus() === 'green' ? 'All Systems Operational' : 
-                     getSystemOverallStatus() === 'yellow' ? 'Degraded Performance' : 'System Issues Detected'}
-                  </span>
-                </div>
-                <div className="status-items">
-                  <div className="status-item">
-                    <span className="status-label">API Server</span>
-                    <span className={`status-indicator ${getStatusColor(systemStatus.api)}`}>
-                      {systemStatus.api === 'healthy' ? '145ms ✅' : 
-                       systemStatus.api === 'degraded' ? 'Slow ⚠️' : 'Down ❌'}
+              {showStatusPanel && (
+                <div className="status-panel">
+                  <div className="status-header">
+                    <h3>System Health</h3>
+                    <span className={`status-badge ${getSystemOverallStatus()}`}>
+                      {getSystemOverallStatus() === 'green' ? 'All Systems Operational' : 
+                       getSystemOverallStatus() === 'yellow' ? 'Degraded Performance' : 'System Issues Detected'}
                     </span>
                   </div>
-                  <div className="status-item">
-                    <span className="status-label">Database</span>
-                    <span className={`status-indicator ${getStatusColor(systemStatus.database)}`}>
-                      {systemStatus.database === 'healthy' ? 'Healthy ✅' : 
-                       systemStatus.database === 'degraded' ? 'Issues ⚠️' : 'Critical ❌'}
-                    </span>
-                  </div>
-                  <div className="status-item">
-                    <span className="status-label">Storage</span>
-                    <span className="status-indicator">
-                      <div className="storage-bar">
-                        <div 
-                          className="storage-fill" 
-                          style={{width: `${systemStatus.storage}%`}}
-                        ></div>
-                      </div>
-                      <span>{systemStatus.storage}%</span>
-                    </span>
-                  </div>
-                  <div className="status-item">
-                    <span className="status-label">Active Sessions</span>
-                    <span className="status-indicator">{systemStatus.sessions}</span>
-                  </div>
-                  <div className="status-item">
-                    <span className="status-label">Last Backup</span>
-                    <span className="status-indicator">{systemStatus.lastBackup}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Quick Actions */}
-          <div className="quick-actions-wrapper">
-            <button 
-              className="header-icon-btn" 
-              title="Quick Actions"
-              onClick={() => setShowQuickActions(!showQuickActions)}
-            >
-              ⚡
-            </button>
-
-            {showQuickActions && (
-              <div className="quick-actions-dropdown">
-                <button onClick={() => { onQuickRegister?.('student'); setShowQuickActions(false); }}>
-                  <span>🎓</span> Register Student
-                </button>
-                <button onClick={() => { onQuickRegister?.('company'); setShowQuickActions(false); }}>
-                  <span>🏢</span> Register Company
-                </button>
-                <button onClick={() => { onQuickRegister?.('examiner'); setShowQuickActions(false); }}>
-                  <span>👨‍🏫</span> Register Examiner
-                </button>
-                <button onClick={() => { onQuickRegister?.('advisor'); setShowQuickActions(false); }}>
-                  <span>👨‍💼</span> Register Advisor
-                </button>
-                <div className="dropdown-divider"></div>
-                <button onClick={() => { onExportData?.('users'); setShowQuickActions(false); }}>
-                  <span>📥</span> Export User Report
-                </button>
-                <button onClick={() => { onExportData?.('approvals'); setShowQuickActions(false); }}>
-                  <span>📥</span> Export Approvals Report
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* AI Briefing Button */}
-          <button 
-            className="ai-briefing-btn" 
-            onClick={handleAIBriefing}
-            ref={briefingRef}
-            title="AI Daily Briefing"
-          >
-            <span className="briefing-icon">✨</span>
-            <span className="briefing-text">AI Briefing</span>
-          </button>
-
-          {/* AI Briefing Panel */}
-          {showAIBriefing && aiBriefingData && (
-            <div className="ai-briefing-panel">
-              <div className="briefing-header">
-                <div>
-                  <h3>✨ AI Daily Briefing</h3>
-                  <p>{aiBriefingData.date.toLocaleDateString()} - System Overview</p>
-                </div>
-                <button onClick={() => setShowAIBriefing(false)}>✕</button>
-              </div>
-              <div className="briefing-content">
-                <div className="briefing-stats">
-                  <div className="briefing-stat">
-                    <span className="stat-icon">📊</span>
-                    <div>
-                      <div className="stat-value">{aiBriefingData.totalUsers}</div>
-                      <div className="stat-label">Total Users</div>
+                  <div className="status-items">
+                    <div className="status-item">
+                      <span className="status-label">API Server</span>
+                      <span className="status-indicator">
+                        {systemStatus.api === 'healthy' ? '145ms ✅' : 
+                         systemStatus.api === 'degraded' ? 'Slow ⚠️' : 'Down ❌'}
+                      </span>
                     </div>
-                  </div>
-                  <div className="briefing-stat">
-                    <span className="stat-icon">🆕</span>
-                    <div>
-                      <div className="stat-value">+{aiBriefingData.newToday}</div>
-                      <div className="stat-label">New Today</div>
+                    <div className="status-item">
+                      <span className="status-label">Database</span>
+                      <span className="status-indicator">
+                        {systemStatus.database === 'healthy' ? 'Healthy ✅' : 
+                         systemStatus.database === 'degraded' ? 'Issues ⚠️' : 'Critical ❌'}
+                      </span>
                     </div>
-                  </div>
-                  <div className="briefing-stat">
-                    <span className="stat-icon">⏳</span>
-                    <div>
-                      <div className="stat-value">{aiBriefingData.pendingApprovals}</div>
-                      <div className="stat-label">Pending</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="briefing-alert urgent">
-                  <span>🔴</span> {aiBriefingData.urgentApprovals} approvals need immediate attention
-                </div>
-                <div className="briefing-alert warning">
-                  <span>🟡</span> {aiBriefingData.unassignedStudents} students unassigned
-                </div>
-                <div className="briefing-recommendations">
-                  <h4>🤖 AI Recommendations</h4>
-                  <ul>
-                    {aiBriefingData.recommendations.map((rec, index) => (
-                      <li key={index}>{rec}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div className="briefing-prediction">
-                  <span>🔮</span> {aiBriefingData.predictions}
-                </div>
-              </div>
-              <div className="briefing-footer">
-                <button onClick={() => setShowAIBriefing(false)}>Dismiss</button>
-                <button onClick={() => {
-                  setShowAIBriefing(false);
-                  setTimeout(() => setShowAIBriefing(true), 14400000); // Remind in 4 hours
-                }}>Remind in 4 hours</button>
-              </div>
-            </div>
-          )}
-
-          {/* Notifications */}
-          <div className="notification-wrapper" ref={notificationRef}>
-            <button 
-              className={`header-icon-btn notification-btn ${unreadNotifications > 0 ? 'has-notifications' : ''}`}
-              onClick={() => setShowNotifications(!showNotifications)}
-              title="Notifications"
-              aria-label={`Notifications ${unreadNotifications > 0 ? `(${unreadNotifications} unread)` : ''}`}
-            >
-              <span className="icon">🔔</span>
-              {unreadNotifications > 0 && (
-                <span className="notification-badge">{unreadNotifications > 99 ? '99+' : unreadNotifications}</span>
-              )}
-            </button>
-
-            {showNotifications && (
-              <div className="notification-dropdown">
-                <div className="notification-header">
-                  <h3>Notifications</h3>
-                  <button className="mark-read-btn">Mark all read</button>
-                </div>
-                <div className="notification-list">
-                  {notifications.length > 0 ? (
-                    notifications.map((notif, index) => (
-                      <div 
-                        key={index} 
-                        className={`notification-item ${notif.unread ? 'unread' : ''} ${notif.type}`}
-                        onClick={() => handleNotificationClick(notif)}
-                      >
-                        <span className="notif-icon">{getNotificationIcon(notif.type)}</span>
-                        <div className="notif-content">
-                          <p className="notif-message">{notif.message}</p>
-                          <span className="notif-time">{formatRelativeTime(notif.timestamp)}</span>
+                    <div className="status-item">
+                      <span className="status-label">Storage</span>
+                      <span className="status-indicator">
+                        <div className="storage-bar">
+                          <div className="storage-fill" style={{width: `${systemStatus.storage}%`}}></div>
                         </div>
-                        {notif.action && (
-                          <button className="notif-action">{notif.action}</button>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="notification-empty">
-                      <span>🎉</span>
-                      <p>No new notifications</p>
-                      <span className="empty-subtitle">You're all caught up!</span>
+                        <span>{systemStatus.storage}%</span>
+                      </span>
                     </div>
-                  )}
-                </div>
-                <div className="notification-footer">
-                  <button>View all notifications</button>
-                  <button>Notification settings</button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Profile */}
-          <div className="profile-wrapper" ref={profileRef}>
-            <button 
-              className="profile-btn" 
-              onClick={() => setShowProfile(!showProfile)}
-              title="Profile"
-              aria-label="User profile menu"
-            >
-              <div className="avatar">
-                <span>SA</span>
-                <span className="avatar-crown">👑</span>
-              </div>
-              <span className="admin-name">{adminName}</span>
-              <span className="dropdown-arrow">▾</span>
-            </button>
-
-            {showProfile && (
-              <div className="profile-dropdown">
-                <div className="profile-header">
-                  <div className="profile-avatar-large">
-                    <span>SA</span>
-                    <span className="avatar-crown-large">👑</span>
-                  </div>
-                  <div className="profile-info">
-                    <h4>{adminName}</h4>
-                    <p>{adminRole}</p>
-                    <span className="active-status">
-                      <span className="online-dot"></span> Online
-                    </span>
+                    <div className="status-item">
+                      <span className="status-label">Active Sessions</span>
+                      <span className="status-indicator">{systemStatus.sessions}</span>
+                    </div>
+                    <div className="status-item">
+                      <span className="status-label">Last Backup</span>
+                      <span className="status-indicator">{systemStatus.lastBackup}</span>
+                    </div>
                   </div>
                 </div>
-                <div className="profile-menu">
-                  <button className="profile-menu-item">
-                    <span>👤</span> My Profile
-                  </button>
-                  <button className="profile-menu-item">
-                    <span>🔑</span> Change Password
-                  </button>
-                  <button className="profile-menu-item">
-                    <span>⚙️</span> Quick Settings
-                  </button>
-                  <button className="profile-menu-item">
-                    <span>🌙</span> Dark Mode
-                  </button>
-                  <button className="profile-menu-item">
-                    <span>📖</span> Help & Documentation
-                  </button>
-                </div>
-                <div className="profile-footer">
-                  <button className="logout-btn" onClick={onLogout}>
-                    <span>🚪</span> Logout
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
-          {/* Time Display */}
-          <div className="header-time">
-            <div className="time-value">{currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
-            <div className="time-date">{currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</div>
+            {/* Quick Actions */}
+            <div className="quick-actions-wrapper" ref={quickActionsRef}>
+              <button 
+                className="header-icon-btn" 
+                title="Quick Actions"
+                onClick={() => setShowQuickActions(!showQuickActions)}
+              >
+                ⚡
+              </button>
+
+              {showQuickActions && (
+                <div className="quick-actions-dropdown">
+                  <button onClick={() => { onQuickRegister?.('student'); setShowQuickActions(false); }}>
+                    <span>🎓</span> Register Student
+                  </button>
+                  <button onClick={() => { onQuickRegister?.('company'); setShowQuickActions(false); }}>
+                    <span>🏢</span> Register Company
+                  </button>
+                  <button onClick={() => { onQuickRegister?.('examiner'); setShowQuickActions(false); }}>
+                    <span>👨‍🏫</span> Register Examiner
+                  </button>
+                  <button onClick={() => { onQuickRegister?.('advisor'); setShowQuickActions(false); }}>
+                    <span>👨‍💼</span> Register Advisor
+                  </button>
+                  <div className="dropdown-divider"></div>
+                  <button onClick={() => { onExportData?.('users'); setShowQuickActions(false); }}>
+                    <span>📥</span> Export User Report
+                  </button>
+                  <button onClick={() => { onExportData?.('approvals'); setShowQuickActions(false); }}>
+                    <span>📥</span> Export Approvals Report
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* AI Briefing */}
+            <div ref={briefingRef} style={{ position: 'relative' }}>
+              <button 
+                className="ai-briefing-btn" 
+                onClick={handleAIBriefing}
+                title="AI Daily Briefing"
+              >
+                <span className="briefing-icon">✨</span>
+                <span className="briefing-text">AI Briefing</span>
+              </button>
+
+              {showAIBriefing && aiBriefingData && (
+                <div className="ai-briefing-panel">
+                  <div className="briefing-header">
+                    <div>
+                      <h3>✨ AI Daily Briefing</h3>
+                      <p>{aiBriefingData.date.toLocaleDateString()} - System Overview</p>
+                    </div>
+                    <button onClick={() => setShowAIBriefing(false)}>✕</button>
+                  </div>
+                  <div className="briefing-content">
+                    <div className="briefing-stats">
+                      <div className="briefing-stat">
+                        <span className="stat-icon">📊</span>
+                        <div>
+                          <div className="stat-value">{aiBriefingData.totalUsers}</div>
+                          <div className="stat-label">Total Users</div>
+                        </div>
+                      </div>
+                      <div className="briefing-stat">
+                        <span className="stat-icon">🆕</span>
+                        <div>
+                          <div className="stat-value">+{aiBriefingData.newToday}</div>
+                          <div className="stat-label">New Today</div>
+                        </div>
+                      </div>
+                      <div className="briefing-stat">
+                        <span className="stat-icon">⏳</span>
+                        <div>
+                          <div className="stat-value">{aiBriefingData.pendingApprovals}</div>
+                          <div className="stat-label">Pending</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="briefing-alert urgent">
+                      <span>🔴</span> {aiBriefingData.urgentApprovals} approvals need immediate attention
+                    </div>
+                    <div className="briefing-alert warning">
+                      <span>🟡</span> {aiBriefingData.unassignedStudents} students unassigned
+                    </div>
+                    <div className="briefing-recommendations">
+                      <h4>🤖 AI Recommendations</h4>
+                      <ul>
+                        {aiBriefingData.recommendations.map((rec, index) => (
+                          <li key={index}>{rec}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="briefing-prediction">
+                      <span>🔮</span> {aiBriefingData.predictions}
+                    </div>
+                  </div>
+                  <div className="briefing-footer">
+                    <button onClick={() => setShowAIBriefing(false)}>Dismiss</button>
+                    <button onClick={() => {
+                      setShowAIBriefing(false);
+                      setTimeout(() => setShowAIBriefing(true), 14400000);
+                    }}>Remind in 4 hours</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Notifications */}
+            <div className="notification-wrapper" ref={notificationRef}>
+              <button 
+                className={`header-icon-btn notification-btn ${unreadNotifications > 0 ? 'has-notifications' : ''}`}
+                onClick={() => setShowNotifications(!showNotifications)}
+                title="Notifications"
+                aria-label={`Notifications ${unreadNotifications > 0 ? `(${unreadNotifications} unread)` : ''}`}
+              >
+                <span className="icon">🔔</span>
+                {unreadNotifications > 0 && (
+                  <span className="notification-badge">
+                    {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                  </span>
+                )}
+              </button>
+
+              {showNotifications && (
+                <div className="notification-dropdown">
+                  <div className="notification-header">
+                    <h3>Notifications</h3>
+                    <button className="mark-read-btn">Mark all read</button>
+                  </div>
+                  <div className="notification-list">
+                    {notifications.length > 0 ? (
+                      notifications.map((notif, index) => (
+                        <div 
+                          key={index} 
+                          className={`notification-item ${notif.unread ? 'unread' : ''}`}
+                          onClick={() => handleNotificationClick(notif)}
+                        >
+                          <span className="notif-icon">{getNotificationIcon(notif.type)}</span>
+                          <div className="notif-content">
+                            <p className="notif-message">{notif.message}</p>
+                            <span className="notif-time">{formatRelativeTime(notif.timestamp)}</span>
+                          </div>
+                          {notif.action && (
+                            <button className="notif-action">{notif.action}</button>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="notification-empty">
+                        <span>🎉</span>
+                        <p>No new notifications</p>
+                        <span className="empty-subtitle">You're all caught up!</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="notification-footer">
+                    <button>View all notifications</button>
+                    <button>Notification settings</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Profile */}
+            <div className="profile-wrapper" ref={profileRef}>
+              <button 
+                className="profile-btn" 
+                onClick={() => setShowProfile(!showProfile)}
+                title="Profile"
+                aria-label="User profile menu"
+              >
+                <div className="avatar">
+                  <span>SA</span>
+                  <span className="avatar-crown">👑</span>
+                </div>
+                <span className="admin-name">{adminName}</span>
+                <span className="dropdown-arrow">▾</span>
+              </button>
+
+              {showProfile && (
+                <div className="profile-dropdown">
+                  <div className="profile-header">
+                    <div className="profile-avatar-large">
+                      <span>SA</span>
+                      <span className="avatar-crown-large">👑</span>
+                    </div>
+                    <div className="profile-info">
+                      <h4>{adminName}</h4>
+                      <p>{adminRole}</p>
+                      <span className="active-status">
+                        <span className="online-dot"></span> Online
+                      </span>
+                    </div>
+                  </div>
+                  <div className="profile-menu">
+                    <button className="profile-menu-item">
+                      <span>👤</span> My Profile
+                    </button>
+                    <button className="profile-menu-item">
+                      <span>🔑</span> Change Password
+                    </button>
+                    <button className="profile-menu-item">
+                      <span>⚙️</span> Quick Settings
+                    </button>
+                    <button className="profile-menu-item">
+                      <span>🌙</span> Dark Mode
+                    </button>
+                    <button className="profile-menu-item">
+                      <span>📖</span> Help & Documentation
+                    </button>
+                  </div>
+                  <div className="profile-footer">
+                    <button className="logout-btn" onClick={onLogout}>
+                      <span>🚪</span> Logout
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -666,7 +680,7 @@ const Header = ({
             <span className="search-icon">🔍</span>
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Search users, approvals, reports..."
               value={searchQuery}
               onChange={handleSearch}
               autoFocus
