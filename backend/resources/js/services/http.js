@@ -18,6 +18,11 @@ const buildQuery = (params = {}) => {
   return qs ? `?${qs}` : '';
 };
 
+export const partnershipAPI = {
+  /** Pass a plain object (JSON) or FormData for file uploads; axios sets multipart boundaries automatically. */
+  apply: (payload) => http.post('/api/partnership/apply', payload),
+};
+
 export const authAPI = {
   login: (payload) => http.post('/login', payload),
   logout: () => http.post('/logout'),
@@ -25,6 +30,7 @@ export const authAPI = {
 };
 
 export const superAdminAPI = {
+  logout: () => http.post('/logout'),
   getUsers: () => http.get('/admin/users'),
   getDepartments: () => http.get('/admin/departments'),
   getApprovalsSummary: () => http.get('/admin/approvals/summary'),
@@ -56,6 +62,12 @@ export const superAdminAPI = {
   assignExaminer: (payload) => http.post('/admin/assign/examiner', payload),
   assignAdvisor: (payload) => http.post('/admin/assign/advisor', payload),
   assignBoth: (payload) => http.post('/admin/assign/both', payload),
+  getCompanyEngagementReport: (params) => http.get(`/admin/reports/company-engagement${buildQuery(params)}`),
+  getReportsDashboard: (params) => http.get(`/admin/reports/dashboard${buildQuery(params)}`),
+  exportReport: (payload) =>
+    http.post('/admin/reports/export', payload, {
+      responseType: 'blob',
+    }),
 };
 
 export const internshipAPI = {

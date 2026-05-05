@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Link } from '@inertiajs/react';
 import './LandingPage.css';
 
 // Assets from public folder
@@ -10,6 +11,24 @@ const heroVideos = [
   '/videos/hero-bg-2.mp4',
   '/videos/hero-bg-3.mp4',
   '/videos/hero-bg-4.mp4',
+];
+
+const internshipListings = [
+  { id: 1, company: 'Ethio Telecom', initials: 'ET', color: '#2196f3', department: 'Computer Science', title: 'Software Development Intern', location: 'Addis Ababa', type: 'Full-time', duration: '3-4 months', stipend: 'ETB 8,000/month', deadline: '2025-12-15', skills: ['React', 'Node.js', 'MongoDB', 'Git'], posted: '2 days ago', description: 'Join our development team and work on real-world projects building next-generation telecom solutions.', requirements: ['Currently enrolled in CS/IT program', 'CGPA 3.0+', 'Knowledge of JavaScript', 'Git experience'], positions: 3, verified: true, featured: true },
+  { id: 2, company: 'Commercial Bank of Ethiopia', initials: 'CB', color: '#4caf50', department: 'Accounting', title: 'Banking Operations Intern', location: 'Addis Ababa', type: 'Full-time', duration: '5-6 months', stipend: 'ETB 6,500/month', deadline: '2025-12-30', skills: ['Accounting', 'Excel', 'Financial Analysis', 'Communication'], posted: '5 days ago', description: 'Gain hands-on experience in banking operations, financial analysis, and customer service.', requirements: ['Accounting/Finance major', 'CGPA 3.2+', 'Strong analytical skills'], positions: 5, verified: true },
+  { id: 3, company: 'Ethiopian Airlines', initials: 'EA', color: '#ff9800', department: 'Engineering', title: 'Engineering Intern', location: 'Addis Ababa', type: 'On-site', duration: '4-5 months', stipend: 'ETB 10,000/month', deadline: '2025-12-20', skills: ['Mechanical Engineering', 'CAD', 'Problem Solving', 'Teamwork'], posted: '1 week ago', description: 'Work alongside experienced engineers on aircraft maintenance and engineering projects.', requirements: ['Engineering major', 'CGPA 3.0+', 'CAD proficiency'], positions: 2, verified: true, featured: true },
+  { id: 4, company: 'DHL Ethiopia', initials: 'DH', color: '#ff5722', department: 'Business Administration', title: 'Logistics Intern', location: 'Addis Ababa', type: 'Full-time', duration: '3-4 months', stipend: 'ETB 7,000/month', deadline: '2026-01-01', skills: ['Supply Chain', 'Excel', 'Communication', 'Problem Solving'], posted: '3 days ago', description: 'Learn about global logistics and supply chain management in a fast-paced environment.', requirements: ['Business/Logistics major', 'CGPA 3.0+', 'Interest in operations'], positions: 4, verified: true },
+  { id: 5, company: 'Safaricom', initials: 'SF', color: '#9c27b0', department: 'Information Technology', title: 'Telecom Intern', location: 'Addis Ababa', type: 'Hybrid', duration: '4-5 months', stipend: 'ETB 9,000/month', deadline: '2025-12-25', skills: ['Telecommunications', 'Customer Service', 'Data Analysis', 'Networking'], posted: '1 week ago', description: 'Explore the telecom industry and customer experience management.', requirements: ['IT/Engineering major', 'CGPA 3.0+', 'Communication skills'], positions: 3, verified: true },
+  { id: 6, company: 'Awash International Bank', initials: 'AI', color: '#3f51b5', department: 'Accounting', title: 'Finance Intern', location: 'Addis Ababa', type: 'Full-time', duration: '5-6 months', stipend: 'ETB 7,500/month', deadline: '2026-01-10', skills: ['Finance', 'Excel', 'Financial Modeling', 'Analysis'], posted: '4 days ago', description: 'Work in financial analysis and banking operations at a leading private bank.', requirements: ['Finance/Economics major', 'CGPA 3.2+', 'Quantitative skills'], positions: 2, verified: true },
+];
+
+const partnersList = [
+  { name: 'Ethio Telecom', logo: '📡', industry: 'Telecommunications', location: 'Addis Ababa', hires: 45, rating: 4.9, reviewsCount: 210, openRoles: 14, premium: true, internships: 45, description: 'Leading telecommunications provider offering digital transformation internships', focusAreas: 'Technology, Innovation, Digital Transformation' },
+  { name: 'Commercial Bank of Ethiopia', logo: '🏦', industry: 'Banking & Finance', location: 'Addis Ababa', hires: 38, rating: 4.7, reviewsCount: 156, openRoles: 11, premium: false, internships: 38, description: 'Premier banking institution providing financial services and banking internships', focusAreas: 'Finance, Banking, Customer Service' },
+  { name: 'Ethiopian Airlines', logo: '✈️', industry: 'Aviation', location: 'Bole', hires: 25, rating: 4.85, reviewsCount: 98, openRoles: 9, premium: true, internships: 25, description: 'National carrier offering aviation, logistics, and operations internships', focusAreas: 'Aviation, Engineering, Logistics' },
+  { name: 'Dashen Bank', logo: '💰', industry: 'Banking & Finance', location: 'Addis Ababa', hires: 32, rating: 4.6, reviewsCount: 74, openRoles: 8, premium: false, internships: 32, description: 'Innovative banking solutions and financial technology internship programs', focusAreas: 'FinTech, Banking, Digital Services' },
+  { name: 'Ministry of Education', logo: '🎓', industry: 'Government', location: 'Addis Ababa', hires: 20, rating: 4.5, reviewsCount: 42, openRoles: 6, premium: false, internships: 20, description: 'Government ministry overseeing education policy and internship coordination', focusAreas: 'Policy, Research, Administration' },
+  { name: 'DHL Ethiopia', logo: '📦', industry: 'Logistics & Supply Chain', location: 'Addis Ababa', hires: 28, rating: 4.55, reviewsCount: 61, openRoles: 7, premium: false, internships: 28, description: 'Global logistics leader with structured internship pathways.', focusAreas: 'Operations, Supply Chain' },
 ];
 
 // --- Helper Component: Animated Number Counter ---
@@ -91,28 +110,32 @@ const LandingPage = () => {
     setContactStatus('Your message is ready to send in your email client. Please complete and send it to support@aru.edu.et.');
   };
 
-  // Internships Data
-  const internshipListings = [
-    { id: 1, company: 'Ethio Telecom', initials: 'ET', color: '#2196f3', department: 'Computer Science', title: 'Software Development Intern', location: 'Addis Ababa', type: 'Full-time', duration: '3-4 months', stipend: 'ETB 8,000/month', deadline: '2025-12-15', skills: ['React', 'Node.js', 'MongoDB', 'Git'], posted: '2 days ago', description: 'Join our development team and work on real-world projects building next-generation telecom solutions.', requirements: ['Currently enrolled in CS/IT program', 'CGPA 3.0+', 'Knowledge of JavaScript', 'Git experience'], positions: 3, verified: true },
-    { id: 2, company: 'Commercial Bank of Ethiopia', initials: 'CB', color: '#4caf50', department: 'Accounting', title: 'Banking Operations Intern', location: 'Addis Ababa', type: 'Full-time', duration: '5-6 months', stipend: 'ETB 6,500/month', deadline: '2025-12-30', skills: ['Accounting', 'Excel', 'Financial Analysis', 'Communication'], posted: '5 days ago', description: 'Gain hands-on experience in banking operations, financial analysis, and customer service.', requirements: ['Accounting/Finance major', 'CGPA 3.2+', 'Strong analytical skills'], positions: 5, verified: true },
-    { id: 3, company: 'Ethiopian Airlines', initials: 'EA', color: '#ff9800', department: 'Engineering', title: 'Engineering Intern', location: 'Addis Ababa', type: 'On-site', duration: '4-5 months', stipend: 'ETB 10,000/month', deadline: '2025-12-20', skills: ['Mechanical Engineering', 'CAD', 'Problem Solving', 'Teamwork'], posted: '1 week ago', description: 'Work alongside experienced engineers on aircraft maintenance and engineering projects.', requirements: ['Engineering major', 'CGPA 3.0+', 'CAD proficiency'], positions: 2, verified: true },
-    { id: 4, company: 'DHL Ethiopia', initials: 'DH', color: '#ff5722', department: 'Business Administration', title: 'Logistics Intern', location: 'Addis Ababa', type: 'Full-time', duration: '3-4 months', stipend: 'ETB 7,000/month', deadline: '2026-01-01', skills: ['Supply Chain', 'Excel', 'Communication', 'Problem Solving'], posted: '3 days ago', description: 'Learn about global logistics and supply chain management in a fast-paced environment.', requirements: ['Business/Logistics major', 'CGPA 3.0+', 'Interest in operations'], positions: 4, verified: true },
-    { id: 5, company: 'Safaricom', initials: 'SF', color: '#9c27b0', department: 'Information Technology', title: 'Telecom Intern', location: 'Addis Ababa', type: 'Hybrid', duration: '4-5 months', stipend: 'ETB 9,000/month', deadline: '2025-12-25', skills: ['Telecommunications', 'Customer Service', 'Data Analysis', 'Networking'], posted: '1 week ago', description: 'Explore the telecom industry and customer experience management.', requirements: ['IT/Engineering major', 'CGPA 3.0+', 'Communication skills'], positions: 3, verified: true },
-    { id: 6, company: 'Awash International Bank', initials: 'AI', color: '#3f51b5', department: 'Accounting', title: 'Finance Intern', location: 'Addis Ababa', type: 'Full-time', duration: '5-6 months', stipend: 'ETB 7,500/month', deadline: '2026-01-10', skills: ['Finance', 'Excel', 'Financial Modeling', 'Analysis'], posted: '4 days ago', description: 'Work in financial analysis and banking operations at a leading private bank.', requirements: ['Finance/Economics major', 'CGPA 3.2+', 'Quantitative skills'], positions: 2, verified: true }
-  ];
-
-  const partnersList = [
-    { name: 'Ethio Telecom', logo: '📡', industry: 'Telecommunications', internships: 45, description: 'Leading telecommunications provider offering digital transformation internships', focusAreas: 'Technology, Innovation, Digital Transformation' },
-    { name: 'Commercial Bank of Ethiopia', logo: '🏦', industry: 'Banking & Finance', internships: 38, description: 'Premier banking institution providing financial services and banking internships', focusAreas: 'Finance, Banking, Customer Service' },
-    { name: 'Ethiopian Airlines', logo: '✈️', industry: 'Aviation', internships: 25, description: 'National carrier offering aviation, logistics, and operations internships', focusAreas: 'Aviation, Engineering, Logistics' },
-    { name: 'Dashen Bank', logo: '💰', industry: 'Banking & Finance', internships: 32, description: 'Innovative banking solutions and financial technology internship programs', focusAreas: 'FinTech, Banking, Digital Services' },
-    { name: 'Ministry of Education', logo: '🎓', industry: 'Government', internships: 20, description: 'Government ministry overseeing education policy and internship coordination', focusAreas: 'Policy, Research, Administration' }
-  ];
-
   const [expandedInternship, setExpandedInternship] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedPartner, setExpandedPartner] = useState(null);
   const ITEMS_PER_PAGE = 6;
+
+  const [internshipSearch, setInternshipSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('deadline');
+  const [viewMode, setViewMode] = useState('grid');
+  const [quickChip, setQuickChip] = useState(null);
+  const [internshipBarScrolled, setInternshipBarScrolled] = useState(false);
+  const [tick, setTick] = useState(0);
+  const [listLoading, setListLoading] = useState(true);
+  const searchBarRef = useRef(null);
+
+  const [savedInternships, setSavedInternships] = useState(() => {
+    try {
+      const raw = localStorage.getItem('aru-saved-internships');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [partnerIndustry, setPartnerIndustry] = useState('All');
+  const [partnerQuery, setPartnerQuery] = useState('');
 
   // Scroll and Observer effects
   useEffect(() => {
@@ -145,8 +168,130 @@ const LandingPage = () => {
     };
   }, []);
 
-  const totalPages = Math.ceil(internshipListings.length / ITEMS_PER_PAGE);
-  const paginatedInternships = internshipListings.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  useEffect(() => {
+    const t = window.setTimeout(() => setListLoading(false), 650);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setTick((x) => x + 1), 60000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const el = searchBarRef.current;
+      if (!el) return;
+      const top = el.getBoundingClientRect().top;
+      setInternshipBarScrolled(top < 96);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [internshipSearch, typeFilter, quickChip, sortBy]);
+
+  const stipendNum = (s) => {
+    const m = String(s).match(/[\d,]+/);
+    return m ? parseInt(m[0].replace(/,/g, ''), 10) : 0;
+  };
+
+  const filteredInternships = useMemo(() => {
+    let list = [...internshipListings];
+    if (internshipSearch.trim()) {
+      const q = internshipSearch.toLowerCase();
+      list = list.filter(
+        (i) =>
+          i.title.toLowerCase().includes(q) ||
+          i.company.toLowerCase().includes(q) ||
+          i.department.toLowerCase().includes(q) ||
+          i.skills.some((sk) => sk.toLowerCase().includes(q))
+      );
+    }
+    if (typeFilter !== 'all') {
+      list = list.filter((i) => i.type === typeFilter);
+    }
+    if (quickChip === 'tech') {
+      list = list.filter(
+        (i) =>
+          i.skills.some((sk) => /react|node|mongo|software|data|git|telecom/i.test(sk)) ||
+          /software|developer|data|telecom|it/i.test(i.title)
+      );
+    } else if (quickChip === 'finance') {
+      list = list.filter((i) => /finance|accounting|bank|banking/i.test(`${i.title} ${i.department}`));
+    } else if (quickChip === 'hybrid') {
+      list = list.filter((i) => i.type === 'Hybrid');
+    }
+    const sorted = [...list].sort((a, b) => {
+      if (sortBy === 'deadline') return new Date(a.deadline) - new Date(b.deadline);
+      if (sortBy === 'stipend') return stipendNum(b.stipend) - stipendNum(a.stipend);
+      if (sortBy === 'recent') return b.id - a.id;
+      return a.id - b.id;
+    });
+    return sorted;
+  }, [internshipSearch, typeFilter, quickChip, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredInternships.length / ITEMS_PER_PAGE));
+  const paginatedInternships = filteredInternships.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
+  const activeFilterCount = [internshipSearch.trim(), typeFilter !== 'all', quickChip != null].filter(Boolean).length;
+
+  const industryCounts = useMemo(() => {
+    const map = { All: partnersList.length };
+    partnersList.forEach((p) => {
+      map[p.industry] = (map[p.industry] || 0) + 1;
+    });
+    return map;
+  }, [partnersList]);
+
+  const partnerIndustries = useMemo(() => ['All', ...new Set(partnersList.map((p) => p.industry))], []);
+
+  const filteredPartners = useMemo(() => {
+    let list = [...partnersList];
+    if (partnerIndustry !== 'All') list = list.filter((p) => p.industry === partnerIndustry);
+    if (partnerQuery.trim()) {
+      const q = partnerQuery.toLowerCase();
+      list = list.filter((p) => p.name.toLowerCase().includes(q) || p.industry.toLowerCase().includes(q));
+    }
+    return list;
+  }, [partnerIndustry, partnerQuery, partnersList]);
+
+  const toggleSaveInternship = (id) => {
+    setSavedInternships((prev) => {
+      const s = new Set(prev);
+      if (s.has(id)) s.delete(id);
+      else s.add(id);
+      const arr = [...s];
+      try {
+        localStorage.setItem('aru-saved-internships', JSON.stringify(arr));
+      } catch {
+        /* ignore */
+      }
+      return arr;
+    });
+  };
+
+  const shareInternship = async (internship) => {
+    const url = `${window.location.origin}${window.location.pathname}#internships`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: internship.title, text: `${internship.company} — ${internship.title}`, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        window.alert('Link to internships copied to clipboard.');
+      }
+    } catch {
+      try {
+        await navigator.clipboard.writeText(url);
+        window.alert('Link copied.');
+      } catch {
+        /* ignore */
+      }
+    }
+  };
 
   const getDaysLeft = (deadline) => {
     const today = new Date();
@@ -286,76 +431,230 @@ const LandingPage = () => {
       </section>
 
       {/* INTERNSHIPS SECTION */}
-      <section id="internships" className="internships-section">
+      <section id="internships" className="internships-section internships-section--premium">
+        <div className="internships-floating-dots" aria-hidden />
         <div className="container">
           <div className="section-header reveal">
-            <span className="section-tag">Opportunities</span>
+            <span className="section-tag section-tag--glow">Opportunities</span>
             <h2 className="section-title">Internship <span className="text-gradient">Programs</span></h2>
             <p className="section-subtitle">Current internship postings by our partner companies and admin</p>
           </div>
 
+          <div ref={searchBarRef} className={`internships-search-bar internships-search-bar--glass ${internshipBarScrolled ? 'scrolled' : ''}`}>
+            <div className="search-input-wrapper">
+              <span className="search-icon">🔍</span>
+              <input
+                type="search"
+                placeholder="Search roles, skills, companies…"
+                value={internshipSearch}
+                onChange={(e) => setInternshipSearch(e.target.value)}
+                aria-label="Search internships"
+              />
+            </div>
+            <div className="filter-pills type-filter-pills" role="group" aria-label="Employment type">
+              {['all', 'Full-time', 'Hybrid', 'On-site'].map((t) => (
+                <button key={t} type="button" className={`filter-pill ${typeFilter === t ? 'active' : ''}`} onClick={() => setTypeFilter(t)}>
+                  {t === 'all' ? 'All types' : t}
+                </button>
+              ))}
+            </div>
+            <div className="sort-wrap">
+              <label className="sort-label" htmlFor="intern-sort">Sort</label>
+              <select id="intern-sort" className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <option value="deadline">📅 Deadline</option>
+                <option value="stipend">💰 Stipend</option>
+                <option value="recent">🆕 Recent</option>
+              </select>
+            </div>
+            <div className="view-toggle" role="group" aria-label="View mode">
+              <button type="button" className={`view-toggle-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setViewMode('grid')} aria-label="Grid view">
+                ▦
+              </button>
+              <button type="button" className={`view-toggle-btn ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setViewMode('list')} aria-label="List view">
+                ☰
+              </button>
+            </div>
+            {activeFilterCount > 0 && <span className="filter-count-badge">{activeFilterCount}</span>}
+          </div>
+
+          <div className="quick-filter-chips reveal delay-1">
+            <span className="quick-label">Quick filters</span>
+            {[
+              { id: 'tech', label: 'Technology' },
+              { id: 'finance', label: 'Finance' },
+              { id: 'hybrid', label: 'Hybrid roles' },
+            ].map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={`quick-chip ${quickChip === c.id ? 'active' : ''}`}
+                onClick={() => setQuickChip(quickChip === c.id ? null : c.id)}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+
+          {(internshipSearch.trim() || typeFilter !== 'all' || quickChip) && (
+            <div className="active-filters-bar">
+              <span>Filters active</span>
+              <button
+                type="button"
+                className="clear-all-tag"
+                onClick={() => {
+                  setInternshipSearch('');
+                  setTypeFilter('all');
+                  setQuickChip(null);
+                }}
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+
+          <div className="results-header">
+            <div className="results-count-badge">
+              <span className="results-animated">
+                Showing <strong>{paginatedInternships.length}</strong> of <strong>{filteredInternships.length}</strong> results
+              </span>
+            </div>
+          </div>
+
           <div className="internships-posting-space reveal delay-1">
             <div className="posting-header">
-              <h3>Active Internship Postings</h3>
-              <p>Browse and apply to available internship programs posted by our partner companies</p>
+              <h3>Active internship postings</h3>
+              <p>Browse, save, and apply to programs posted by verified partners</p>
             </div>
 
-            {paginatedInternships.length === 0 ? (
-              <div className="empty-state reveal">
-                <div className="empty-icon">📋</div>
-                <h3>No internship postings available</h3>
-                <p>Check back later for new opportunities</p>
+            {filteredInternships.length === 0 && !listLoading ? (
+              <div className="empty-state reveal internship-empty">
+                <div className="empty-icon">🧭</div>
+                <h3>No matches yet</h3>
+                <p>Try clearing filters or searching with broader keywords.</p>
+                <button type="button" className="btn-secondary btn-sm" onClick={() => { setInternshipSearch(''); setTypeFilter('all'); setQuickChip(null); }}>
+                  Reset filters
+                </button>
+              </div>
+            ) : listLoading ? (
+              <div className={`internships-grid internship-skeleton-grid ${viewMode === 'list' ? 'list-view' : ''}`}>
+                {[1, 2, 3, 4, 5, 6].map((s) => (
+                  <div key={s} className="internship-skeleton-card">
+                    <div className="sk-line sk-line--lg" />
+                    <div className="sk-line sk-line--md" />
+                    <div className="sk-line sk-line--sm" />
+                    <div className="sk-pills">
+                      <span className="sk-pill" />
+                      <span className="sk-pill" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <>
-                <div className="internships-grid">
+                <div className={`internships-grid ${viewMode === 'list' ? 'list-view' : ''}`}>
                   {paginatedInternships.map((internship) => {
                     const isExpanded = expandedInternship === internship.id;
                     const daysLeft = getDaysLeft(internship.deadline);
                     const urgency = getDeadlineUrgency(internship.deadline);
+                    const saved = savedInternships.includes(internship.id);
                     return (
-                      <div key={internship.id} className={`internship-card reveal ${isExpanded ? 'expanded' : ''}`}>
-                        <div className="card-top-row">
-                          <div className="company-logo" style={{ backgroundColor: internship.color }}>{internship.initials}</div>
-                        </div>
-                        <h3 className="internship-title">{internship.title}</h3>
-                        <p className="internship-company">{internship.company} {internship.verified && <span className="verified-badge" title="Verified Partner">✓</span>}</p>
-                        <div className="internship-meta">
-                          <span className="meta-item">📍 {internship.location}</span>
-                          <span className={`meta-item type-badge type-${internship.type.toLowerCase().replace(' ', '-')}`}>{internship.type}</span>
-                          <span className="meta-item">⏱️ {internship.duration}</span>
-                          <span className="meta-item">💰 {internship.stipend}</span>
-                        </div>
-                        <div className="internship-skills">
-                          {internship.skills.map(skill => <span key={skill} className="skill-tag">{skill}</span>)}
-                        </div>
-                        <div className="internship-footer">
-                          <span className={`deadline-badge deadline-${urgency}`}>
-                            {daysLeft === 0 ? '🔴 Deadline Today' : `⏳ ${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`}
-                          </span>
-                          <div className="footer-actions">
-                            <button className="learn-more-btn" onClick={() => setExpandedInternship(isExpanded ? null : internship.id)}>
-                              {isExpanded ? 'Show Less ▲' : 'Learn More ▼'}
-                            </button>
-                            <a href="/login" className="btn-primary btn-sm">Apply Now</a>
+                      <div
+                        key={internship.id}
+                        className={`internship-card premium-card animated-border reveal ${isExpanded ? 'expanded' : ''} ${internship.featured ? 'featured' : ''}`}
+                      >
+                        {internship.featured && <div className="featured-ribbon">Featured</div>}
+                        <div className="card-inner">
+                          <div className="card-top-row">
+                            <div className="company-logo-wrapper">
+                              <div className={`company-logo logo-shimmer`} style={{ backgroundColor: internship.color }}>
+                                {internship.initials}
+                              </div>
+                              <div className="company-info-mini">
+                                <h4>{internship.company}</h4>
+                                {internship.verified && (
+                                  <span className="verified-inline" title="Verified partner">
+                                    ✓ Verified
+                                  </span>
+                                )}
+                                <span className="posted-date">Posted {internship.posted}</span>
+                              </div>
+                            </div>
+                            <div className="card-actions-top">
+                              <button
+                                type="button"
+                                className={`icon-btn heart-btn ${saved ? 'saved' : ''}`}
+                                aria-label={saved ? 'Remove saved' : 'Save listing'}
+                                onClick={() => toggleSaveInternship(internship.id)}
+                              >
+                                {saved ? '♥' : '♡'}
+                              </button>
+                              <button type="button" className="icon-btn" aria-label="Share" onClick={() => shareInternship(internship)}>
+                                ↗
+                              </button>
+                            </div>
+                          </div>
+
+                          <h3 className="internship-title">📋 {internship.title}</h3>
+
+                          <div className="internship-meta internship-meta--grid">
+                            <span className="meta-item">📍 {internship.location}</span>
+                            <span className={`meta-item type-badge type-${internship.type.toLowerCase().replace(/\s+/g, '-')}`}>{internship.type}</span>
+                            <span className="meta-item">⏱️ {internship.duration}</span>
+                            <span className="meta-item">💰 {internship.stipend}</span>
+                          </div>
+
+                          <div className="internship-skills">
+                            {internship.skills.map((skill) => (
+                              <span key={skill} className="skill-tag skill-tag-gradient">
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+
+                          <div className="details-divider" />
+
+                          <div className="internship-footer internship-footer--glass">
+                            <div className="deadline-row">
+                              <span className={`deadline-badge deadline-${urgency}`}>
+                                <span className="deadline-dot" aria-hidden />
+                                📅 {new Date(internship.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </span>
+                              <span key={tick} className={`countdown-pill countdown-${urgency}`}>
+                                {daysLeft === 0 ? 'Last day' : `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`}
+                              </span>
+                            </div>
+                            <div className="footer-actions-group">
+                              <button type="button" className="learn-more-btn" onClick={() => setExpandedInternship(isExpanded ? null : internship.id)}>
+                                {isExpanded ? 'Learn Less ▲' : 'Learn More ▼'}
+                              </button>
+                              <a href="/login" className="btn-apply-sm">
+                                Apply <span className="arrow">→</span>
+                              </a>
+                            </div>
                           </div>
                         </div>
+
                         {isExpanded && (
-                          <div className="internship-details">
-                            <div className="details-section">
-                              <h5>📋 Job Description</h5>
+                          <div className="internship-details-expanded">
+                            <div className="detail-block">
+                              <h5>
+                                <span className="detail-icon">📋</span> Role overview
+                              </h5>
                               <p>{internship.description}</p>
                             </div>
-                            <div className="details-section">
-                              <h5>✅ Requirements</h5>
-                              <ul className="requirements-list">
-                                {internship.requirements.map((req, i) => <li key={i}>{req}</li>)}
+                            <div className="detail-block">
+                              <h5>
+                                <span className="detail-icon">✅</span> Requirements
+                              </h5>
+                              <ul className="req-list">
+                                {internship.requirements.map((req, i) => (
+                                  <li key={i}>{req}</li>
+                                ))}
                               </ul>
                             </div>
                             <div className="details-meta-row">
-                              <span>🔄 {internship.positions} position{internship.positions !== 1 ? 's' : ''} available</span>
-                              <span>📅 Deadline: {new Date(internship.deadline).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                              <span>📅 Posted: {internship.posted}</span>
+                              <span>🔄 {internship.positions} open role{internship.positions !== 1 ? 's' : ''}</span>
+                              <span>📅 Posted {internship.posted}</span>
                             </div>
                           </div>
                         )}
@@ -364,12 +663,18 @@ const LandingPage = () => {
                   })}
                 </div>
                 {totalPages > 1 && (
-                  <div className="pagination">
-                    <button className="page-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)}>← Prev</button>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                      <button key={page} className={`page-btn ${currentPage === page ? 'active' : ''}`} onClick={() => setCurrentPage(page)}>{page}</button>
+                  <div className="pagination pagination--premium">
+                    <button className="page-btn" disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}>
+                      ← Prev
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button key={page} type="button" className={`page-btn ${currentPage === page ? 'active' : ''}`} onClick={() => setCurrentPage(page)}>
+                        {page}
+                      </button>
                     ))}
-                    <button className="page-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)}>Next →</button>
+                    <button className="page-btn" disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)}>
+                      Next →
+                    </button>
                   </div>
                 )}
               </>
@@ -388,7 +693,7 @@ const LandingPage = () => {
           <div className="steps-wrapper reveal delay-1">
             <div className="steps-progress-line"></div>
             <div className="steps">
-              {[ { num: '1', title: 'Profile Setup', desc: 'Build your academic portfolio' }, { num: '2', title: 'Smart Match', desc: 'Connect with industry leaders' }, { num: '3', title: 'Log Progress', desc: 'Submit weekly milestone reports' }, { num: '4', title: 'Earn Credits', desc: 'Final review and completion' } ].map((step, idx) => (
+              {[ { num: '1', icon: '📝', title: 'Profile Setup', desc: 'Build your academic portfolio' }, { num: '2', icon: '🎯', title: 'Smart Match', desc: 'Connect with industry leaders' }, { num: '3', icon: '📊', title: 'Log Progress', desc: 'Submit weekly milestone reports' }, { num: '4', icon: '🎓', title: 'Earn Credits', desc: 'Final review and completion' } ].map((step, idx) => (
                 <div key={idx} className="step card-hover">
                   <div className="step-number">{step.num}</div>
                   <span className="step-icon">{step.icon}</span>
@@ -411,7 +716,7 @@ const LandingPage = () => {
           </div>
           <div className="testimonials-grid reveal delay-1">
             {[ { name: 'Bedasa Tadesse', initials: 'BT', role: 'Software Developer at Ethio Telecom', company: 'Ethio Telecom', class: 'Class of 2023 · IT', quote: 'The internship program was transformative. Hands-on experience and direct industry exposure led to immediate employment.', stars: 5 }, { name: 'Haweltu Kassa', initials: 'HK', role: 'Banking Officer at CBE', company: 'Commercial Bank of Ethiopia', class: 'Class of 2023 · Accounting', quote: 'Skills gained during internship prepared me for the real world. I was promoted within my first year.', stars: 5 }, { name: 'Kaleb Bekele', initials: 'KB', role: 'Junior Engineer at Ethiopian Airlines', company: 'Ethiopian Airlines', class: 'Class of 2024 · Mech Eng', quote: 'Smart matching connected me with the right company. Now I work on international projects.', stars: 5 } ].map((t, idx) => (
-              <div key={idx} className="testimonial-card reveal delay-${idx + 1}" style={{ borderTopColor: ['#667eea', '#4caf50', '#ff9800'][idx] }}>
+              <div key={idx} className={`testimonial-card reveal delay-${idx + 1}`} style={{ borderTopColor: ['#667eea', '#4caf50', '#ff9800'][idx] }}>
                 <div className="testimonial-quote-icon">&ldquo;</div>
                 <div className="testimonial-header">
                   <div className="testimonial-avatar" style={{ background: ['#667eea', '#4caf50', '#ff9800'][idx] }}>{t.initials}</div>
@@ -426,31 +731,158 @@ const LandingPage = () => {
       </section>
 
       {/* PARTNERSHIP SECTION */}
-      <section id="partnership" className="partnership-section">
+      <section id="partnership" className="partnership-section partnership-section--dark">
+        <div className="partnership-dot-pattern" aria-hidden />
         <div className="container">
-          <div className="section-header reveal">
-            <span className="section-tag">Partners</span>
-            <h2 className="section-title">Become a <span className="text-gradient">Partner</span></h2>
-            <p className="section-subtitle">Join us in shaping Ethiopia's future workforce</p>
+          <div className="section-header reveal partnership-section-header">
+            <span className="section-tag section-tag--glow light">Partners</span>
+            <h2 className="section-title light">
+              Trusted <span className="text-gradient">Partners</span>
+            </h2>
+            <p className="section-subtitle light">Organizations powering experiential learning at Arsi University</p>
           </div>
 
-          <div className="become-partner-cta reveal delay-1">
-            <div className="become-partner-content">
-              <h3>🤝 Partner with Arsi University</h3>
-              <p>Join 120+ organizations shaping the future of talent in Ethiopia. Our partnership program connects you with pre-vetted, talented students ready to contribute to your organization.</p>
-              <ul className="partner-benefits-list">
-                <li>🎯 Access pre-vetted student talent pool</li>
-                <li>📋 Post unlimited internship opportunities</li>
-                <li>🤖 AI-powered candidate matching</li>
-                <li>📊 Progress tracking and evaluation tools</li>
-                <li>🎓 Direct pipeline to university talent</li>
-              </ul>
-              <a href="#contact" onClick={(e) => { e.preventDefault(); scrollToSection('contact'); }} className="btn-primary">Apply for Partnership →</a>
+          <div className="partner-stats-overview reveal delay-1">
+            {[
+              { icon: '🤝', label: 'Partner organizations', end: 120, suffix: '+' },
+              { icon: '🎯', label: 'Live internship roles', end: 54, suffix: '+' },
+              { icon: '⭐', label: 'Avg partner rating', text: '4.7' },
+              { icon: '📈', label: 'Student placements', end: 500, suffix: '+' },
+            ].map((s, i) => (
+              <div key={s.label} className="partner-stat-card glass-stat">
+                <div className="partner-stat-icon">{s.icon}</div>
+                <div className="partner-stat-value">
+                  {s.text ? s.text : <AnimatedCounter end={s.end} suffix={s.suffix || ''} />}
+                </div>
+                <p className="partner-stat-label">{s.label}</p>
+                <div className="stat-progress">
+                  <span
+                    style={{
+                      width: `${s.text ? 94 : Math.min(100, (s.end / (s.label.includes('roles') ? 80 : 600)) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="partner-search-bar reveal delay-2">
+            <div className="search-input-wrapper">
+              <span className="search-icon">🔍</span>
+              <input
+                type="search"
+                placeholder="Search partners by name or industry…"
+                value={partnerQuery}
+                onChange={(e) => setPartnerQuery(e.target.value)}
+                aria-label="Search partners"
+              />
             </div>
-            <div className="become-partner-stats">
-              <div className="bps-item"><span className="bps-num">120+</span><span>Partners</span></div>
-              <div className="bps-item"><span className="bps-num">500+</span><span>Placements</span></div>
-              <div className="bps-item"><span className="bps-num">85%</span><span>Retention</span></div>
+          </div>
+
+          <div className="industry-filters reveal delay-2">
+            <div className="industry-filter-scroll" tabIndex={0}>
+              {partnerIndustries.map((ind) => (
+                <button key={ind} type="button" className={`industry-filter-chip ${partnerIndustry === ind ? 'active' : ''}`} onClick={() => setPartnerIndustry(ind)}>
+                  {ind}
+                  <span className="pill-count">{industryCounts[ind] ?? 0}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="partners-grid reveal delay-3">
+            {filteredPartners.map((p) => {
+              const expanded = expandedPartner === p.name;
+              const stars = Math.round(p.rating);
+              return (
+                <div key={p.name} className={`partner-card-premium glass-card glow-hover ${p.premium ? 'is-premium' : ''}`}>
+                  {p.premium && <div className="premium-partner-ribbon">⭐ Premium Partner</div>}
+                  <div className="partner-logo-ring">
+                    <span className="partner-logo-lg">{p.logo}</span>
+                  </div>
+                  <h3 className="partner-card-title">{p.name}</h3>
+                  <span className="industry-badge">{p.industry}</span>
+                  <p className="partner-loc">📍 {p.location}</p>
+                  <div className="partner-stats-mini">
+                    <div>
+                      <strong>{p.hires}</strong>
+                      <span>Hires</span>
+                    </div>
+                    <div>
+                      <strong>{p.rating}</strong>
+                      <span>Rate</span>
+                    </div>
+                    <div>
+                      <strong>{p.openRoles}</strong>
+                      <span>Open</span>
+                    </div>
+                  </div>
+                  <div className="partner-rating-row">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <span key={i} className={`partner-star ${i < stars ? 'on' : ''}`}>
+                        ★
+                      </span>
+                    ))}
+                    <span className="review-count">({p.reviewsCount} reviews)</span>
+                  </div>
+                  <div className="partner-card-actions">
+                    <button type="button" className="btn-partner-outline" onClick={() => setExpandedPartner(expanded ? null : p.name)}>
+                      {expanded ? 'Hide details' : 'View opportunities'}
+                    </button>
+                    <a href="mailto:partnerships@aru.edu.et?subject=Partnership%20inquiry" className="btn-partner-cta">
+                      Contact <span className="arrow">→</span>
+                    </a>
+                  </div>
+                  {expanded && (
+                    <div className="partner-expand">
+                      <p>{p.description}</p>
+                      <p className="focus-areas">
+                        <strong>Focus areas:</strong> {p.focusAreas}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="become-partner-cta become-partner-cta--split reveal delay-4">
+            <div className="cta-particles" aria-hidden />
+            <div className="become-partner-content">
+              <h3>🤝 Become a Partner</h3>
+              <p>Join 120+ organizations shaping the future of talent in Ethiopia with structured internships and campus visibility.</p>
+              <ul className="partner-benefits-list partner-benefits-list--checks">
+                <li>Access pre-vetted talent pool</li>
+                <li>AI-powered candidate matching</li>
+                <li>Post unlimited internships</li>
+                <li>Custom evaluation frameworks</li>
+                <li>Dedicated support team</li>
+              </ul>
+              <Link href="/become-partner" className="btn-cta-pulse btn-cta-large">
+                Apply for Partnership <span>→</span>
+              </Link>
+              <div className="trust-badges">
+                <span>120+ partners</span>
+                <span>500+ placements</span>
+              </div>
+            </div>
+            <div className="become-partner-stats become-partner-stats--viz">
+              <div className="bps-item glass">
+                <span className="bps-num">
+                  <AnimatedCounter end={120} suffix="+" />
+                </span>
+                <span>Partners</span>
+              </div>
+              <div className="bps-item glass">
+                <span className="bps-num">
+                  <AnimatedCounter end={500} suffix="+" />
+                </span>
+                <span>Placements</span>
+              </div>
+              <div className="bps-item glass">
+                <span className="bps-num">85%</span>
+                <span>Retention</span>
+              </div>
             </div>
           </div>
         </div>
@@ -531,7 +963,7 @@ const LandingPage = () => {
         <div className="container">
           <div className="footer-grid">
             <div className="footer-column"><div className="footer-logo"><img src={universityLogo} alt="Logo" onError={(e) => { e.target.style.display = 'none'; }} /><div><h4>Arsi University</h4><span>Internship Portal</span></div></div><p className="footer-description">Bridging education and industry through innovative internship management.</p><div className="footer-social">{[ '🔗', '🐦', '📘', '▶️' ].map((s, i) => <a key={i} href="#" aria-label="Social">{s}</a>)}</div></div>
-            <div className="footer-column"><h4>Quick Links</h4><ul className="footer-links">{[ 'Home', 'Features', 'Internships', 'Partners', 'Contact' ].map(l => <li key={l}><a href={`#${l.toLowerCase()}`} onClick={(e) => { e.preventDefault(); scrollToSection(l.toLowerCase()); }}>{l}</a></li>)}</ul></div>
+            <div className="footer-column"><h4>Quick Links</h4><ul className="footer-links">{[ { label: 'Home', id: 'home' }, { label: 'Features', id: 'features' }, { label: 'Internships', id: 'internships' }, { label: 'Partners', id: 'partnership' }, { label: 'Contact', id: 'contact' } ].map((l) => <li key={l.id}><a href={`#${l.id}`} onClick={(e) => { e.preventDefault(); scrollToSection(l.id); }}>{l.label}</a></li>)}</ul></div>
             <div className="footer-column"><h4>Resources</h4><ul className="footer-links">{[ 'Help Center', 'Documentation', 'FAQ', 'Privacy Policy', 'Terms' ].map(l => <li key={l}><a href="#">{l}</a></li>)}</ul></div>
             <div className="footer-column"><h4>Contact Info</h4><ul className="footer-contact"><li>📧 <a href="mailto:support@aru.edu.et">support@aru.edu.et</a></li><li>📞 +251-XXX-XXXXXX</li><li>📍 Arsi University, Asella</li><li>🕐 Mon-Fri, 8AM-5PM</li></ul></div>
           </div>

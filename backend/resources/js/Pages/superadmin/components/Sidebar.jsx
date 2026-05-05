@@ -1,6 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { router } from '@inertiajs/react';
 
 const Sidebar = ({ activeSection, setActiveSection, sidebarOpen, setSidebarOpen, pendingApprovalsCount = 0 }) => {
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
   const menuItems = [
     {
       id: 'overview',
@@ -68,6 +72,16 @@ const Sidebar = ({ activeSection, setActiveSection, sidebarOpen, setSidebarOpen,
 
   const toggleMenu = (menuId) => {
     setOpenMenus((prev) => ({ ...prev, [menuId]: !prev[menuId] }));
+  };
+
+  const handleLogout = () => {
+    setLoggingOut(true);
+    router.post('/logout', {}, {
+      onFinish: () => {
+        setLoggingOut(false);
+        setLogoutOpen(false);
+      },
+    });
   };
 
   return (
@@ -147,11 +161,40 @@ const Sidebar = ({ activeSection, setActiveSection, sidebarOpen, setSidebarOpen,
       </nav>
 
       <div className="sa-sidebar-footer">
-        <div className="footer-item">
+        <button
+          type="button"
+          className="footer-item sa-logout-btn"
+          onClick={() => setLogoutOpen(true)}
+        >
           <span className="footer-icon">🚪</span>
-          {sidebarOpen && <span>Logout</span>}
-        </div>
+          {sidebarOpen && <span className="footer-label">Logout</span>}
+        </button>
       </div>
+
+      {logoutOpen && (
+        <div className="sa-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="logout-title">
+          <div className="sa-modal sa-logout-modal">
+            <div className="sa-modal-header">
+              <h3 id="logout-title">🚪 Confirm logout</h3>
+              <button type="button" className="sa-modal-close" onClick={() => setLogoutOpen(false)} aria-label="Close">
+                ✕
+              </button>
+            </div>
+            <div className="sa-modal-body">
+              <p>Are you sure you want to logout of the Super Admin portal?</p>
+              <p className="sa-logout-warning">⚠️ Unsaved changes may be lost.</p>
+            </div>
+            <div className="sa-modal-footer">
+              <button type="button" className="sa-btn-secondary" onClick={() => setLogoutOpen(false)} disabled={loggingOut}>
+                Cancel
+              </button>
+              <button type="button" className="sa-btn-danger" onClick={handleLogout} disabled={loggingOut}>
+                {loggingOut ? 'Logging out…' : 'Logout'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -12,6 +12,11 @@ class AppController extends Controller
         return Inertia::render('LandingPage');
     }
 
+    public function becomePartner()
+    {
+        return Inertia::render('BecomePartner');
+    }
+
     public function login()
     {
         return Inertia::render('Login');

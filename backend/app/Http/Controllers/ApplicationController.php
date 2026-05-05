@@ -63,11 +63,24 @@ class ApplicationController extends Controller
 
     public function update(Request $request, $id)
     {
-        $this->authorize('applications.review');
-
         $application = Application::findOrFail($id);
         $application->loadMissing('internship');
         $user = auth()->user();
+
+        // Student dashboard withdraws via PUT { status: 'withdrawn' } — must not require applications.review.
+        if ($user && $user->isStudent()
+            && (int) $application->student_id === (int) $user->id
+            && $request->input('status') === 'withdrawn') {
+            $this->authorize('applications.withdraw');
+            $application->withdraw();
+
+            return response()->json([
+                'message' => 'Application withdrawn successfully',
+                'application' => $application->load(['student', 'internship.company', 'coordinator']),
+            ]);
+        }
+
+        $this->authorize('applications.review');
 
         if ($user->isCompany() && (int) $application->internship->company_id !== (int) $user->company_id) {
             return response()->json(['error' => 'Unauthorized'], 403);

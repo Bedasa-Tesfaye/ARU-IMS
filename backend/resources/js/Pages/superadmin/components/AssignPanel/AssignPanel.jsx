@@ -1,17 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { COLLEGE_DEPARTMENTS, COLLEGE_NAMES } from '../../data/collegeDepartments';
+import { resolveDepartmentId } from '../../utils/resolveDepartmentId';
 import { superAdminAPI } from '../../../../services/http';
 import './AssignPanel.css';
-
-const collegesFallback = [
-  'College of Agriculture and Environmental Science',
-  'College of Business and Economics',
-  'College of Education and Behavioral Science',
-  'College of Health Sciences',
-  'College of Social Sciences and Humanities',
-  'College of Law',
-  'College Computational Sciences',
-  'Institute of Oromo Studies',
-];
 
 const workloadTone = (n) => {
   if (n >= 15) return 'danger';
@@ -21,14 +12,11 @@ const workloadTone = (n) => {
 
 const safe = (v, fallback = '—') => (v === null || v === undefined || v === '' ? fallback : v);
 
-const AssignPanel = ({ onSuccess, onError, onActivity }) => {
+const AssignPanel = ({ allDepartments = [], onSuccess, onError, onActivity }) => {
   const [loading, setLoading] = useState(false);
 
-  const [colleges, setColleges] = useState([]);
-  const [collegeId, setCollegeId] = useState('');
-
-  const [departments, setDepartments] = useState([]);
-  const [departmentId, setDepartmentId] = useState('');
+  const [selectedCollegeName, setSelectedCollegeName] = useState('');
+  const [selectedDepartmentName, setSelectedDepartmentName] = useState('');
 
   const [showAssigned, setShowAssigned] = useState(false);
   const [search, setSearch] = useState('');
@@ -47,23 +35,23 @@ const AssignPanel = ({ onSuccess, onError, onActivity }) => {
 
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  const departmentOptions = useMemo(
+    () => (selectedCollegeName ? COLLEGE_DEPARTMENTS[selectedCollegeName] || [] : []),
+    [selectedCollegeName]
+  );
+
+  const { id: departmentId, department: matchedDepartment, ambiguous } = useMemo(
+    () => resolveDepartmentId(allDepartments, selectedDepartmentName),
+    [allDepartments, selectedDepartmentName]
+  );
+
   const selectedCount = selectedStudentIds.size;
-  const selectedDepartment = useMemo(() => departments.find((d) => String(d.id) === String(departmentId)), [departments, departmentId]);
-  const selectedCollege = useMemo(() => colleges.find((c) => String(c.id) === String(collegeId)), [colleges, collegeId]);
+
+  const selectedDepartment = matchedDepartment;
 
   const canAssignExaminer = selectedCount > 0 && !!selectedExaminerId && !!departmentId;
   const canAssignAdvisor = selectedCount > 0 && !!selectedAdvisorId && !!departmentId;
   const canAssignBoth = selectedCount > 0 && !!selectedAdvisorId && !!selectedExaminerId && !!departmentId;
-
-  const loadColleges = async () => {
-    const res = await superAdminAPI.getColleges();
-    setColleges(res.data || []);
-  };
-
-  const loadDepartments = async (cId) => {
-    const res = await superAdminAPI.getDepartmentsByCollege(cId);
-    setDepartments(res.data || []);
-  };
 
   const loadStudents = async (page = 1) => {
     const res = await superAdminAPI.getUnassignedStudents({
@@ -92,39 +80,13 @@ const AssignPanel = ({ onSuccess, onError, onActivity }) => {
     setAdvisors(advRes.data || []);
   };
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        await loadColleges();
-      } catch (e) {
-        // fallback list if backend hasn't been migrated yet
-        setColleges(collegesFallback.map((name, idx) => ({ id: `fallback-${idx}`, name, code: `F${idx}` })));
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
-    if (!collegeId || String(collegeId).startsWith('fallback-')) {
-      setDepartments([]);
-      setDepartmentId('');
-      return;
-    }
-    (async () => {
-      setLoading(true);
-      try {
-        await loadDepartments(collegeId);
-        setDepartmentId('');
-      } catch (e) {
-        onError?.(e.response?.data?.message || 'Failed to load departments.');
-      } finally {
-        setLoading(false);
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [collegeId]);
+  const handleCollegeChange = (name) => {
+    setSelectedCollegeName(name);
+    setSelectedDepartmentName('');
+    setSelectedStudentIds(new Set());
+    setSelectedExaminerId('');
+    setSelectedAdvisorId('');
+  };
 
   useEffect(() => {
     if (!departmentId) {
@@ -218,6 +180,8 @@ const AssignPanel = ({ onSuccess, onError, onActivity }) => {
     return students.filter((s) => s.advisor_id && s.examiner_id);
   }, [students, showAssigned]);
 
+  const deptResolutionIssue = selectedDepartmentName && !departmentId;
+
   return (
     <div className="sa-assign">
       <div className="sa-assign-header">
@@ -234,27 +198,44 @@ const AssignPanel = ({ onSuccess, onError, onActivity }) => {
         <div className="form-grid">
           <div className="form-group">
             <label>College</label>
-            <select value={collegeId} onChange={(e) => setCollegeId(e.target.value)} disabled={loading}>
+            <select
+              value={selectedCollegeName}
+              onChange={(e) => handleCollegeChange(e.target.value)}
+              disabled={loading}
+            >
               <option value="">Select college</option>
-              {colleges.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+              {COLLEGE_NAMES.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
               ))}
             </select>
           </div>
 
           <div className="form-group">
             <label>Department</label>
-            <select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} disabled={loading || !collegeId || String(collegeId).startsWith('fallback-')}>
-              <option value="">{!collegeId ? 'Select college first' : 'Select department'}</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
+            <select
+              value={selectedDepartmentName}
+              onChange={(e) => setSelectedDepartmentName(e.target.value)}
+              disabled={loading || !selectedCollegeName}
+            >
+              <option value="">{!selectedCollegeName ? 'Select college first' : 'Select department'}</option>
+              {departmentOptions.map((dept) => (
+                <option key={dept} value={dept}>
+                  {dept}
+                </option>
               ))}
             </select>
           </div>
 
           <div className="form-group">
             <label>Search students</label>
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, student ID, email..." />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name, student ID, email..."
+              disabled={!departmentId}
+            />
           </div>
 
           <div className="form-group">
@@ -269,26 +250,52 @@ const AssignPanel = ({ onSuccess, onError, onActivity }) => {
                 <option value="asc">Asc</option>
                 <option value="desc">Desc</option>
               </select>
-              <button
-                type="button"
-                className="btn-secondary"
-                disabled={!departmentId}
-                onClick={() => loadStudents(1)}
-              >
+              <button type="button" className="btn-secondary" disabled={!departmentId} onClick={() => loadStudents(1)}>
                 Apply
               </button>
             </div>
           </div>
         </div>
 
+        {deptResolutionIssue && (
+          <div className="sa-assign-warning">
+            No department record matches <strong>{selectedDepartmentName}</strong> in the database. Add or rename the
+            department under Admin so assignments and APIs can use a valid <code>department_id</code>.
+          </div>
+        )}
+        {ambiguous && departmentId && (
+          <div className="sa-assign-hint">Multiple departments matched this label; using the first match: {matchedDepartment?.name}.</div>
+        )}
+
+        <div className="sa-assign-summary" role="status">
+          <div className="sa-summary-chip">
+            <span className="sa-summary-label">Students (list)</span>
+            <strong>{departmentId ? safe(pagination?.total, students.length) : '—'}</strong>
+          </div>
+          <div className="sa-summary-chip">
+            <span className="sa-summary-label">Available examiners</span>
+            <strong>{departmentId ? examiners.length : '—'}</strong>
+          </div>
+          <div className="sa-summary-chip">
+            <span className="sa-summary-label">Available advisors</span>
+            <strong>{departmentId ? advisors.length : '—'}</strong>
+          </div>
+          <div className="sa-summary-chip">
+            <span className="sa-summary-label">Selected</span>
+            <strong>{selectedCount}</strong>
+          </div>
+        </div>
+
         <div className="sa-toggle-row">
           <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <input type="checkbox" checked={showAssigned} onChange={(e) => setShowAssigned(e.target.checked)} disabled={!departmentId} />
+            <input
+              type="checkbox"
+              checked={showAssigned}
+              onChange={(e) => setShowAssigned(e.target.checked)}
+              disabled={!departmentId}
+            />
             Show already-assigned students (toggle)
           </label>
-          <div className="sa-selected-chip">
-            <b>{selectedCount}</b> selected
-          </div>
         </div>
       </div>
 
@@ -443,23 +450,61 @@ const AssignPanel = ({ onSuccess, onError, onActivity }) => {
           <div className="modal-container" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Confirm Assignment</h3>
-              <button type="button" className="modal-close" onClick={() => setConfirmOpen(false)}>✕</button>
+              <button type="button" className="modal-close" onClick={() => setConfirmOpen(false)}>
+                ✕
+              </button>
             </div>
             <div className="modal-body">
               <div className="sa-detail-grid">
-                <div><span>College</span><b>{safe(selectedCollege?.name)}</b></div>
-                <div><span>Department</span><b>{safe(selectedDepartment?.name)}</b></div>
-                <div><span>Students</span><b>{selectedCount}</b></div>
-                <div><span>Action</span><b>{canAssignBoth ? 'Assign Both' : canAssignExaminer ? 'Assign Examiner' : 'Assign Advisor'}</b></div>
-                <div><span>Examiner</span><b>{safe(examiners.find((e) => String(e.id) === String(selectedExaminerId)) ? `${examiners.find((e) => String(e.id) === String(selectedExaminerId)).first_name} ${examiners.find((e) => String(e.id) === String(selectedExaminerId)).last_name}` : '')}</b></div>
-                <div><span>Advisor</span><b>{safe(advisors.find((a) => String(a.id) === String(selectedAdvisorId)) ? `${advisors.find((a) => String(a.id) === String(selectedAdvisorId)).first_name} ${advisors.find((a) => String(a.id) === String(selectedAdvisorId)).last_name}` : '')}</b></div>
+                <div>
+                  <span>College</span>
+                  <b>{safe(selectedCollegeName)}</b>
+                </div>
+                <div>
+                  <span>Department</span>
+                  <b>{safe(selectedDepartment?.name || selectedDepartmentName)}</b>
+                </div>
+                <div>
+                  <span>Students</span>
+                  <b>{selectedCount}</b>
+                </div>
+                <div>
+                  <span>Action</span>
+                  <b>{canAssignBoth ? 'Assign Both' : canAssignExaminer ? 'Assign Examiner' : 'Assign Advisor'}</b>
+                </div>
+                <div>
+                  <span>Examiner</span>
+                  <b>
+                    {safe(
+                      examiners.find((e) => String(e.id) === String(selectedExaminerId))
+                        ? `${examiners.find((e) => String(e.id) === String(selectedExaminerId)).first_name} ${
+                            examiners.find((e) => String(e.id) === String(selectedExaminerId)).last_name
+                          }`
+                        : ''
+                    )}
+                  </b>
+                </div>
+                <div>
+                  <span>Advisor</span>
+                  <b>
+                    {safe(
+                      advisors.find((a) => String(a.id) === String(selectedAdvisorId))
+                        ? `${advisors.find((a) => String(a.id) === String(selectedAdvisorId)).first_name} ${
+                            advisors.find((a) => String(a.id) === String(selectedAdvisorId)).last_name
+                          }`
+                        : ''
+                    )}
+                  </b>
+                </div>
               </div>
               <p style={{ color: '#64748b', marginBottom: 0 }}>
                 This will update selected students and record assignment history (who assigned whom and when).
               </p>
             </div>
             <div className="modal-footer">
-              <button type="button" className="btn-secondary" onClick={() => setConfirmOpen(false)}>Cancel</button>
+              <button type="button" className="btn-secondary" onClick={() => setConfirmOpen(false)}>
+                Cancel
+              </button>
               <button type="button" className="btn-primary" onClick={submitAssignment} disabled={loading || selectedCount === 0}>
                 {loading ? 'Assigning...' : 'Confirm'}
               </button>
@@ -472,4 +517,3 @@ const AssignPanel = ({ onSuccess, onError, onActivity }) => {
 };
 
 export default AssignPanel;
-

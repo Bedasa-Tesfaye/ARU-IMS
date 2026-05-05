@@ -622,3 +622,167 @@
     font-size: 0.8rem;
   }
 }
+
+/* —— Registration hub (Super Admin) —— */
+.sa-registration-hub {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 20px;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.06);
+}
+
+.sa-reg-hub-header {
+  margin-bottom: 1rem;
+}
+
+.sa-reg-hub-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.35rem;
+  color: #0f172a;
+}
+
+.sa-reg-hub-sub {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.sa-reg-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.sa-reg-progress-step {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+}
+
+.sa-reg-progress-step.done {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.sa-reg-progress-step.current {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+}
+
+.sa-reg-progress-step.pending {
+  opacity: 0.75;
+}
+
+.sa-reg-progress-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.sa-reg-progress-line {
+  width: 28px;
+  height: 2px;
+  background: #e2e8f0;
+  border-radius: 2px;
+}
+
+.sa-reg-type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+
+.sa-reg-type-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  text-align: left;
+  padding: 1rem 1rem;
+  border-radius: 16px;
+  border: 2px solid #e2e8f0;
+  background: #fff;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.sa-reg-type-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  border-color: #c7d2fe;
+}
+
+.sa-reg-type-card.active {
+  border-color: transparent;
+  background: linear-gradient(#fff, #fff) padding-box, linear-gradient(135deg, #6366f1, #a855f7, #ec4899) border-box;
+  border: 2px solid transparent;
+  box-shadow: 0 10px 32px rgba(99, 102, 241, 0.22);
+}
+
+.sa-reg-type-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.sa-reg-type-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.sa-reg-type-label {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 0.95rem;
+}
+
+.sa-reg-type-blurb {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.sa-reg-form-shell {
+  animation: saRegSlide 0.38s ease;
+}
+
+@keyframes saRegSlide {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.sa-reg-placeholder {
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.sa-reg-active-hint {
+  margin: 1rem 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+  text-align: center;
+}

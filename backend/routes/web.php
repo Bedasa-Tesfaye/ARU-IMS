@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\SuperAdminReportController;
+use App\Http\Controllers\PartnershipApplicationController;
 use App\Http\Controllers\AdvisorController;
 use App\Http\Controllers\AIAdvisorController;
 use App\Http\Controllers\AICompanyController;
@@ -31,6 +33,9 @@ use Inertia\Inertia;
 */
 
 Route::get('/', [AppController::class, 'landing']);
+
+Route::get('/become-partner', [AppController::class, 'becomePartner'])->name('become-partner');
+Route::post('/api/partnership/apply', [PartnershipApplicationController::class, 'store']);
 
 Route::get('/register', [AppController::class, 'login']);
 Route::get('/login', [AppController::class, 'login'])->name('login');
@@ -101,6 +106,9 @@ Route::middleware('auth:web')->group(function () {
         Route::get('/credentials/expiry-report', [SuperAdminRegistrationController::class, 'credentialsExpiryReport']);
         Route::get('/settings/credential-policy', [SuperAdminRegistrationController::class, 'getCredentialPolicy']);
         Route::put('/settings/credential-policy', [SuperAdminRegistrationController::class, 'updateCredentialPolicy']);
+        Route::get('/reports/company-engagement', [SuperAdminReportController::class, 'companyEngagement']);
+        Route::get('/reports/dashboard', [SuperAdminReportController::class, 'dashboard']);
+        Route::post('/reports/export', [SuperAdminReportController::class, 'export']);
     });
 
     Route::prefix('api/admin')->group(function () {
