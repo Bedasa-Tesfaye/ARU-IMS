@@ -86,6 +86,17 @@ class User extends Authenticatable implements JWTSubject
         );
     }
 
+    /** Advisors explicitly assigned to this student (pivot). */
+    public function advisingAdvisors()
+    {
+        return $this->belongsToMany(
+            User::class,
+            'advisor_student_assignments',
+            'student_id',
+            'advisor_id'
+        );
+    }
+
     public function assignedInternships()
     {
         return $this->hasMany(Internship::class, 'coordinator_id');

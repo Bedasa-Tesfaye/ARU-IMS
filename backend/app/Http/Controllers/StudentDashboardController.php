@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Application;
 use App\Models\Internship;
+use App\Models\StudentInterview;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -15,9 +16,9 @@ class StudentDashboardController extends Controller
         abort_unless($student && $student->role === 'student', 403, 'Only students can access this endpoint.');
 
         $applications = Application::query()->with('internship.company')->where('student_id', $student->id)->get();
-        $active = $applications->whereIn('status', ['pending', 'shortlisted', 'interview'])->count();
-        $offers = $applications->where('status', 'accepted')->count();
-        $interviews = $applications->where('status', 'interview')->count();
+        $active = $applications->where('status', 'pending')->count();
+        $offers = $applications->where('status', 'approved')->count();
+        $interviews = StudentInterview::query()->where('student_id', $student->id)->where('scheduled_at', '>=', now()->startOfDay())->count();
 
         $matches = Internship::query()
             ->with('company')
@@ -48,10 +49,14 @@ class StudentDashboardController extends Controller
             ->where('department_id', $student->department_id)
             ->first(['id', 'first_name', 'last_name', 'email', 'department_id']);
 
-        $advisor = User::query()
+        $pivotAdvisor = $student->advisingAdvisors()->first();
+        $departmentAdvisor = User::query()
             ->where('role', 'advisor')
             ->where('department_id', $student->department_id)
-            ->first(['id', 'first_name', 'last_name', 'email', 'department_id']);
+            ->first(['id', 'first_name', 'last_name', 'email', 'department_id', 'employee_id']);
+
+        $advisor = $pivotAdvisor ?? $departmentAdvisor;
+        $advisorSource = $pivotAdvisor ? 'assigned' : ($departmentAdvisor ? 'department' : null);
 
         return response()->json([
             'student' => [
@@ -76,6 +81,7 @@ class StudentDashboardController extends Controller
             'assigned_staff' => [
                 'examiner' => $examiner,
                 'advisor' => $advisor,
+                'advisor_assignment_source' => $advisorSource,
             ],
             'matches' => $matches,
             'applications' => $applications->take(10)->values(),

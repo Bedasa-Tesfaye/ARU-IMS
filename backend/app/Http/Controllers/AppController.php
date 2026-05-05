@@ -37,4 +37,18 @@ class AppController extends Controller
             'auth' => auth()->user(),
         ]);
     }
+
+    public function advisorDashboard()
+    {
+        return Inertia::render('AdvisorDashboard', [
+            'auth' => auth()->user(),
+        ]);
+    }
+
+    public function companyDashboard()
+    {
+        return Inertia::render('CompanyDashboard', [
+            'auth' => auth()->user(),
+        ]);
+    }
 }

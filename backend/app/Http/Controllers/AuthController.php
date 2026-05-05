@@ -109,6 +109,14 @@ class AuthController extends Controller
                     return redirect('/examiner-dashboard');
                 }
 
+                if ($user && $user->role === 'advisor') {
+                    return redirect('/advisor-dashboard');
+                }
+
+                if ($user && $user->role === 'company') {
+                    return redirect('/company-dashboard');
+                }
+
                 return redirect('/');
             }
 

@@ -213,8 +213,37 @@ const StudentDashboard = () => {
 
       <section className="st-card">
         <h3>Assigned Staff</h3>
-        <p><strong>Examiner:</strong> {data?.assigned_staff?.examiner ? `${data.assigned_staff.examiner.first_name} ${data.assigned_staff.examiner.last_name}` : 'Pending Assignment'}</p>
-        <p><strong>Advisor:</strong> {data?.assigned_staff?.advisor ? `${data.assigned_staff.advisor.first_name} ${data.assigned_staff.advisor.last_name}` : 'Pending Assignment'}</p>
+        <p>
+          <strong>Examiner:</strong>{' '}
+          {data?.assigned_staff?.examiner
+            ? `${data.assigned_staff.examiner.first_name} ${data.assigned_staff.examiner.last_name}`
+            : 'Pending Assignment'}
+          {data?.assigned_staff?.examiner?.email && (
+            <>
+              {' · '}
+              <a href={`mailto:${data.assigned_staff.examiner.email}`}>{data.assigned_staff.examiner.email}</a>
+            </>
+          )}
+        </p>
+        <p>
+          <strong>Advisor:</strong>{' '}
+          {data?.assigned_staff?.advisor
+            ? `${data.assigned_staff.advisor.first_name} ${data.assigned_staff.advisor.last_name}`
+            : 'Pending Assignment'}
+          {data?.assigned_staff?.advisor_assignment_source === 'assigned' && (
+            <span className="st-badge" title="Assigned to you">Assigned</span>
+          )}
+          {data?.assigned_staff?.advisor_assignment_source === 'department' && (
+            <span className="st-badge secondary" title="Department advisor">Dept advisor</span>
+          )}
+        </p>
+        {data?.assigned_staff?.advisor?.email && (
+          <p className="st-subline">
+            <a href={`mailto:${data.assigned_staff.advisor.email}`}>Email advisor</a>
+            {' · '}
+            Book advising via Messages tab — your advisor can see your department cohort.
+          </p>
+        )}
       </section>
 
       <section className="st-card">

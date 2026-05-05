@@ -1,6 +1,10 @@
 <?php
 
+use App\Http\Controllers\AdvisorController;
+use App\Http\Controllers\AIAdvisorController;
+use App\Http\Controllers\AICompanyController;
 use App\Http\Controllers\AppController;
+use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\AIController;
 use App\Http\Controllers\AIExaminerController;
 use App\Http\Controllers\ApplicationController;
@@ -43,6 +47,8 @@ Route::middleware('auth:web')->group(function () {
     Route::get('/superadmin', [AppController::class, 'superAdminDashboard']);
     Route::get('/student-dashboard', [AppController::class, 'studentDashboard']);
     Route::get('/examiner-dashboard', [AppController::class, 'examinerDashboard']);
+    Route::get('/advisor-dashboard', [AppController::class, 'advisorDashboard']);
+    Route::get('/company-dashboard', [AppController::class, 'companyDashboard']);
 
     Route::get('/internships', [InternshipController::class, 'index']);
     Route::post('/internships', [InternshipController::class, 'store']);
@@ -148,6 +154,94 @@ Route::middleware('auth:web')->group(function () {
         Route::post('/smart-reply', [AIController::class, 'smartReply']);
         Route::get('/daily-briefing', [AIController::class, 'dailyBriefing']);
         Route::post('/feedback', [AIController::class, 'feedback']);
+    });
+
+    Route::prefix('api/advisor')->group(function () {
+        Route::get('/dashboard/stats', [AdvisorController::class, 'dashboardStats']);
+        Route::get('/applications/review-queue', [AdvisorController::class, 'applicationReviewQueue']);
+        Route::get('/students', [AdvisorController::class, 'students']);
+        Route::get('/students/{id}/applications', [AdvisorController::class, 'studentApplications']);
+        Route::get('/students/{id}', [AdvisorController::class, 'studentDetail']);
+        Route::put('/applications/{id}/review', [AdvisorController::class, 'reviewApplication']);
+        Route::get('/meetings', [AdvisorController::class, 'meetings']);
+        Route::post('/meetings', [AdvisorController::class, 'storeMeeting']);
+        Route::put('/meetings/{id}', [AdvisorController::class, 'updateMeeting']);
+        Route::get('/meetings/{id}/summary', [AdvisorController::class, 'meetingSummary']);
+        Route::get('/messages', [AdvisorController::class, 'messages']);
+        Route::post('/messages/send', [AdvisorController::class, 'sendMessage']);
+        Route::get('/documents/review', [AdvisorController::class, 'documentsReviewQueue']);
+        Route::post('/documents/{id}/feedback', [AdvisorController::class, 'documentFeedback']);
+        Route::get('/progress', [AdvisorController::class, 'progress']);
+        Route::get('/reports', [AdvisorController::class, 'reports']);
+        Route::post('/reports/generate', [AdvisorController::class, 'generateReport']);
+        Route::get('/settings', [AdvisorController::class, 'settings']);
+        Route::put('/settings', [AdvisorController::class, 'updateSettings']);
+    });
+
+    Route::prefix('api/company')->group(function () {
+        Route::get('/dashboard/stats', [CompanyController::class, 'dashboardStats']);
+        Route::get('/profile', [CompanyController::class, 'profile']);
+        Route::put('/profile', [CompanyController::class, 'updateProfile']);
+        Route::get('/internships', [CompanyController::class, 'internships']);
+        Route::post('/internships', [CompanyController::class, 'storeInternship']);
+        Route::put('/internships/{id}', [CompanyController::class, 'updateInternship']);
+        Route::delete('/internships/{id}', [CompanyController::class, 'destroyInternship']);
+        Route::post('/internships/{id}/submit-for-approval', [CompanyController::class, 'submitForApproval']);
+        Route::get('/internships/{id}/applicants', [CompanyController::class, 'internshipApplicants']);
+        Route::get('/applicants', [CompanyController::class, 'applicants']);
+        Route::get('/applicants/{id}', [CompanyController::class, 'applicantDetail']);
+        Route::put('/applicants/{id}/status', [CompanyController::class, 'updateApplicantStatus']);
+        Route::post('/applicants/{id}/shortlist', [CompanyController::class, 'shortlistApplicant']);
+        Route::post('/applicants/{id}/schedule-interview', [CompanyController::class, 'scheduleInterview']);
+        Route::post('/applicants/{id}/make-offer', [CompanyController::class, 'makeOffer']);
+        Route::get('/interns', [CompanyController::class, 'interns']);
+        Route::get('/interns/{id}', [CompanyController::class, 'internDetail']);
+        Route::post('/interns/{id}/evaluate', [CompanyController::class, 'evaluateIntern']);
+        Route::get('/interns/{id}/evaluations', [CompanyController::class, 'internEvaluations']);
+        Route::get('/messages', [CompanyController::class, 'messages']);
+        Route::post('/messages/send', [CompanyController::class, 'sendMessage']);
+        Route::get('/schedule', [CompanyController::class, 'schedule']);
+        Route::post('/schedule', [CompanyController::class, 'storeSchedule']);
+        Route::get('/analytics', [CompanyController::class, 'analytics']);
+        Route::post('/reports/generate', [CompanyController::class, 'generateReport']);
+        Route::get('/team', [CompanyController::class, 'team']);
+        Route::get('/search-students', [CompanyController::class, 'searchStudents']);
+        Route::post('/invite-students', [CompanyController::class, 'inviteStudents']);
+        Route::get('/talent-pool', [CompanyController::class, 'talentPool']);
+        Route::post('/talent-pool/add', [CompanyController::class, 'addTalentPool']);
+        Route::get('/settings', [CompanyController::class, 'settings']);
+        Route::put('/settings', [CompanyController::class, 'updateSettings']);
+    });
+
+    Route::prefix('api/ai/company')->group(function () {
+        Route::post('/generate-job-description', [AICompanyController::class, 'generateJobDescription']);
+        Route::post('/optimize-posting', [AICompanyController::class, 'optimizePosting']);
+        Route::post('/rank-applicants', [AICompanyController::class, 'rankApplicants']);
+        Route::post('/screen-candidate', [AICompanyController::class, 'screenCandidate']);
+        Route::post('/generate-interview-questions', [AICompanyController::class, 'generateInterviewQuestions']);
+        Route::post('/suggest-reply', [AICompanyController::class, 'suggestReply']);
+        Route::post('/generate-evaluation', [AICompanyController::class, 'generateEvaluation']);
+        Route::post('/predict-fit', [AICompanyController::class, 'predictFit']);
+        Route::post('/chat', [AICompanyController::class, 'chat']);
+        Route::get('/market-insights', [AICompanyController::class, 'marketInsights']);
+        Route::get('/recruitment-analytics', [AICompanyController::class, 'recruitmentAnalytics']);
+        Route::post('/bias-check', [AICompanyController::class, 'biasCheck']);
+        Route::post('/offer-acceptance-predict', [AICompanyController::class, 'offerAcceptancePredict']);
+        Route::post('/intern-performance-predict', [AICompanyController::class, 'internPerformancePredict']);
+    });
+
+    Route::prefix('api/ai/advisor')->group(function () {
+        Route::post('/student-insights', [AIAdvisorController::class, 'studentInsights']);
+        Route::post('/application-review', [AIAdvisorController::class, 'applicationReview']);
+        Route::post('/meeting-prep', [AIAdvisorController::class, 'meetingPrep']);
+        Route::post('/suggest-reply', [AIAdvisorController::class, 'suggestReply']);
+        Route::post('/document-review', [AIAdvisorController::class, 'documentReview']);
+        Route::get('/risk-alerts', [AIAdvisorController::class, 'riskAlerts']);
+        Route::get('/performance-insights', [AIAdvisorController::class, 'performanceInsights']);
+        Route::post('/chat', [AIAdvisorController::class, 'chat']);
+        Route::post('/generate-report', [AIAdvisorController::class, 'generateReport']);
+        Route::get('/trends', [AIAdvisorController::class, 'trends']);
+        Route::post('/mentoring-strategy', [AIAdvisorController::class, 'mentoringStrategy']);
     });
 
     Route::prefix('api/examiner')->group(function () {
