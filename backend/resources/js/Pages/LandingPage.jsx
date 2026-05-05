@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import ChatBotWidget from '../Components/ChatBotWidget';
 import './LandingPage.css';
 
 // Assets from public folder
@@ -541,7 +540,6 @@ const LandingPage = () => {
       </footer>
 
       <button className={`back-to-top ${scrolled ? 'visible' : ''}`} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Back to top">↑</button>
-      <ChatBotWidget context="landing" />
     </div>
   );
 };

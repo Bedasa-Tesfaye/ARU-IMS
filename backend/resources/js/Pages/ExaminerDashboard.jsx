@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { router } from '@inertiajs/react';
 import { aiExaminerAPI, examinerAPI } from '../services/http';
 import './examiner/ExaminerDashboard.css';
 
@@ -501,9 +502,7 @@ const ExaminerDashboard = () => {
             </button>
           ))}
         </nav>
-        <form method="post" action="/logout">
-          <button className="ex-nav logout" type="submit">🚪 Logout</button>
-        </form>
+        <button className="ex-nav logout" type="button" onClick={() => router.post('logout')}>🚪 Logout</button>
       </aside>
       <main className="ex-main">
         {loading && <div className="ex-card">Loading examiner dashboard...</div>}

@@ -2,8 +2,8 @@ import React from 'react';
 import { Link, useForm } from '@inertiajs/react';
 import './Login.css';
 
-// For video in public/assets folder - use absolute path (no import needed)
-// The video file should be at: public/assets/hero-bg-2.mp4
+// For video in public/videos folder - use absolute path (no import needed)
+// The video file should be at: public/videos/hero-bg-2.mp4
 
 const LoginPage = () => {
   const { data, setData, post, processing, errors } = useForm({
@@ -12,6 +12,7 @@ const LoginPage = () => {
     remember: false,
   });
   const [showPassword, setShowPassword] = React.useState(false);
+  const [serverError, setServerError] = React.useState('');
 
   const handleInputChange = (e) => {
     setData(e.target.name, e.target.value);
@@ -19,9 +20,17 @@ const LoginPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    post('/login', {
+    setServerError('');
+
+    // Use relative path so it works when app runs in a subdirectory (e.g. XAMPP /ARU-IMS/backend/public).
+    post('login', {
       preserveState: false,
       preserveScroll: false,
+      onError: () => {
+        setServerError('Login failed. Please check your credentials and try again.');
+      },
+    }).catch(() => {
+      setServerError('Login failed. Please check your credentials and try again.');
     });
   };
 
@@ -103,6 +112,12 @@ const LoginPage = () => {
                 <span>{errors.password}</span>
               </div>
             )}
+            {serverError && (
+              <div className="error-message">
+                <span>⚠️</span>
+                <span>{serverError}</span>
+              </div>
+            )}
 
             <button
               type="submit"
@@ -140,7 +155,7 @@ const LoginPage = () => {
             className="bg-video"
           >
             {/* Video from public folder */}
-            <source src="/hero-bg-2.mp4" type="video/mp4" />
+            <source src="/videos/hero-bg-2.mp4" type="video/mp4" />
             Your browser does not support the video tag.
           </video>
           <div className="bg-overlay"></div>

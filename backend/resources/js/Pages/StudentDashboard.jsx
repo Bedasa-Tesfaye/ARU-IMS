@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { router } from '@inertiajs/react';
 import { aiAPI, studentAPI } from '../services/http';
 import './student/StudentDashboard.css';
 
@@ -553,9 +554,7 @@ const StudentDashboard = () => {
             </button>
           ))}
         </nav>
-        <form method="post" action="/logout">
-          <button className="st-nav logout" type="submit">🚪 Logout</button>
-        </form>
+        <button className="st-nav logout" type="button" onClick={() => router.post('logout')}>🚪 Logout</button>
       </aside>
       <main className="st-main">
         {loading && <div className="st-card">AI is thinking... loading your dashboard.</div>}
