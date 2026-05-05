@@ -3,8 +3,15 @@ import ChatBotWidget from '../Components/ChatBotWidget';
 import './LandingPage.css';
 
 // Assets from public folder
-const universityLogo = '/assets/image.png';
-const heroVideo = '/assets/hero-bg-2.mp4';
+// Use a safe existing asset for the logo (fallback to favicon) to avoid 404s
+const universityLogo = '/favicon.ico';
+// Actual video files in public/videos are named hero-bg-1.mp4, hero-bg-2.mp4, etc.
+const heroVideos = [
+  '/videos/hero-bg-1.mp4',
+  '/videos/hero-bg-2.mp4',
+  '/videos/hero-bg-3.mp4',
+  '/videos/hero-bg-4.mp4',
+];
 
 // --- Helper Component: Animated Number Counter ---
 const AnimatedCounter = ({ end, suffix = "", duration = 2000 }) => {
@@ -46,6 +53,7 @@ const LandingPage = () => {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showHeroVideo, setShowHeroVideo] = useState(false);
+  const [activeHeroIndex, setActiveHeroIndex] = useState(0);
 
   const scrollToSection = (sectionId) => {
     setIsMobileMenuOpen(false);
@@ -123,14 +131,18 @@ const LandingPage = () => {
     const revealElements = document.querySelectorAll('.reveal');
     revealElements.forEach((el) => observer.observe(el));
 
-    const videoTimer = window.setTimeout(() => {
-      setShowHeroVideo(true);
-    }, 400);
+    const videoTimer = window.setTimeout(() => setShowHeroVideo(true), 400);
+
+    // Cycle hero videos every 8 seconds
+    const cycleInterval = window.setInterval(() => {
+      setActiveHeroIndex((i) => (i + 1) % heroVideos.length);
+    }, 8000);
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
       revealElements.forEach((el) => observer.unobserve(el));
       window.clearTimeout(videoTimer);
+      window.clearInterval(cycleInterval);
     };
   }, []);
 
@@ -212,8 +224,9 @@ const LandingPage = () => {
       <section id="home" className="hero">
         <div className="hero-video-bg">
           {showHeroVideo ? (
-            <video autoPlay loop muted playsInline preload="metadata" className="hero-video">
-              <source src={heroVideo} type="video/mp4" />
+            <video autoPlay muted playsInline preload="metadata" className="hero-video" key={activeHeroIndex}>
+              <source src={heroVideos[activeHeroIndex]} type="video/mp4" />
+              Your browser does not support the video tag.
             </video>
           ) : (
             <div className="hero-video-fallback" />
@@ -241,7 +254,7 @@ const LandingPage = () => {
           <div className="hero-image reveal delay-1">
             <div className="hero-video-card parallax-element" style={{ transform: `rotateX(${mousePos.y}deg) rotateY(${-mousePos.x}deg)` }}>
               <video autoPlay loop muted playsInline preload="metadata" className="hero-preview-video">
-                <source src={heroVideo} type="video/mp4" />
+                <source src={heroVideos[activeHeroIndex]} type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
               <div className="hero-video-card-overlay">
