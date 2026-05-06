@@ -1,0 +1,9 @@
+/* ============================================ */
+/* EVALUATION FORM - CRITERIA SCORING            */
+/* ============================================ */
+.evaluation-form { display: grid; gap: 10px; margin-top: 10px; }
+.evaluation-top { display: grid; grid-template-columns: 1fr 120px; gap: 8px; }
+.evaluation-criteria { display: grid; gap: 8px; }
+.evaluation-criteria label { display: grid; grid-template-columns: 1fr 90px; align-items: center; gap: 8px; }
+.evaluation-score-line { display: flex; justify-content: space-between; color: #0f172a; font-weight: 600; }
+.evaluation-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }

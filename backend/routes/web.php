@@ -276,6 +276,8 @@ Route::middleware('auth:web')->group(function () {
         Route::post('/messages', [ExaminerController::class, 'sendMessage']);
         Route::get('/settings', [ExaminerController::class, 'settings']);
         Route::put('/settings', [ExaminerController::class, 'updateSettings']);
+        Route::put('/profile', [ExaminerController::class, 'updateProfile']);
+        Route::put('/password', [ExaminerController::class, 'changePassword']);
     });
 
     Route::prefix('api/ai/examiner')->group(function () {

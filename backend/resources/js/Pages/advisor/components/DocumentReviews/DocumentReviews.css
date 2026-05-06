@@ -1,0 +1,8 @@
+/* ============================================ */
+/* DOCUMENT REVIEWS - DOCUMENT WORKFLOW         */
+/* ============================================ */
+/* Shared: .adv-processing → AdvisorDashboard.css */
+
+.adv-doc-page .adv-list-item {
+  align-items: center;
+}

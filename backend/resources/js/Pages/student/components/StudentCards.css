@@ -1,0 +1,36 @@
+/* ============================================ */
+/* STUDENT CARDS - PANELS AND FEEDBACK          */
+/* ============================================ */
+
+.st-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.st-card.error {
+  color: #dc3545;
+}
+
+.st-hero {
+  grid-column: span 2;
+}
+
+.st-subline {
+  color: #6c757d;
+  margin-top: 8px;
+}
+
+.st-ai-warning {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-left: 4px solid #ffc107;
+}
+
+@media (max-width: 768px) {
+  .st-hero {
+    grid-column: span 1;
+  }
+}

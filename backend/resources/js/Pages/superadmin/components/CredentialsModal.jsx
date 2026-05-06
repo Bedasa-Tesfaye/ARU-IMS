@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { superAdminAPI } from '../../../services/http';
+import './CredentialsModal.css';
 
 const PORTAL_URL = 'https://aru-ims.edu.et/login';
 

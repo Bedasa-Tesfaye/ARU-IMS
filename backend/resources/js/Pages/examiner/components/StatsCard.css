@@ -1,0 +1,11 @@
+/* ============================================ */
+/* STATS CARD - KPI TILE                         */
+/* ============================================ */
+.stats-card { border-left: 5px solid var(--ex-accent); }
+.stats-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.stats-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; }
+.stats-card h3 { margin: 0; font-size: 1.8rem; }
+.stats-card p { margin: 4px 0 0; color: var(--ex-muted); }
+.stats-trend { font-size: .8rem; padding: 4px 8px; border-radius: 999px; }
+.stats-trend.up { background: #dcfce7; color: #166534; }
+.stats-trend.down { background: #fee2e2; color: #991b1b; }

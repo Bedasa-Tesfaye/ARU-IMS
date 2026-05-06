@@ -1,0 +1,20 @@
+/* ============================================ */
+/* COMPANY TABLES - LISTING VIEWS               */
+/* ============================================ */
+
+.co-table-wrap {
+  overflow-x: auto;
+}
+
+.co-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.co-table th,
+.co-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #f3f4f6;
+  text-align: left;
+}

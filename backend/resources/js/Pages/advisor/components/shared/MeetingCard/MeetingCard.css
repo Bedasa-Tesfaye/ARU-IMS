@@ -1,0 +1,14 @@
+/* ============================================ */
+/* MEETING CARD - CALENDAR ROW                  */
+/* ============================================ */
+/* Shared list styles: .adv-list, .adv-list-item → AdvisorDashboard.css */
+/* Calendar legend dots: .adv-cal-dot → MeetingSchedule.css */
+
+.adv-cal-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+}

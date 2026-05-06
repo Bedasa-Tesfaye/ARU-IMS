@@ -1,0 +1,9 @@
+/* ============================================ */
+/* SETTINGS PANEL - SYSTEM + SECURITY FORMS      */
+/* ============================================ */
+.sa-settings-panel { display: flex; flex-direction: column; gap: 1.25rem; }
+.sa-settings-card { background: #fff; border-radius: 16px; padding: 1.25rem 1.5rem; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06); }
+.sa-settings-card h2 { margin-top: 0; }
+.sa-settings-card label { display: flex; flex-direction: column; gap: 0.35rem; margin: 0.65rem 0; font-size: 0.85rem; font-weight: 600; color: #334155; }
+.sa-settings-card input, .sa-settings-card select, .sa-settings-card textarea { padding: 0.5rem 0.65rem; border-radius: 8px; border: 1px solid #e2e8f0; font: inherit; font-weight: 400; }
+.sa-settings-card .sa-check { flex-direction: row; align-items: center; }

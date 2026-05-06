@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import './SettingsPanel.css';
 
 export default function SettingsPanel({ credentialPolicy, onCredentialUpdated }) {
   const [general, setGeneral] = useState({

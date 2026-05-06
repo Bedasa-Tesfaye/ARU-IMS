@@ -1,0 +1,74 @@
+/* ============================================ */
+/* COMPANY FORMS - BUTTONS AND INPUTS           */
+/* ============================================ */
+
+.co-btn {
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.co-btn.secondary {
+  background: #6b7280;
+}
+
+.co-btn.ghost {
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  color: #2563eb;
+}
+
+.co-btn-sm {
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+
+.co-form-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.co-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.co-form-grid input,
+.co-form-grid select,
+.co-form-grid textarea {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  font-weight: 400;
+}
+
+.co-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.co-step-pill {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.co-step-pill.on {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1e40af;
+}

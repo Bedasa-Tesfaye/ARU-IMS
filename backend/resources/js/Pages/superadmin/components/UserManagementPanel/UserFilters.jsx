@@ -1,4 +1,5 @@
 import React from 'react';
+import './UserFilters.css';
 
 const UserFilters = ({
   searchTerm,

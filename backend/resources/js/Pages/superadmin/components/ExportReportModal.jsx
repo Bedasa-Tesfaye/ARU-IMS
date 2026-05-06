@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './ExportReportModal.css';
 
 const defaultOptions = () => ({
   format: 'pdf',

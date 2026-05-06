@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { router } from '@inertiajs/react';
+import './Sidebar.css';
 
 const Sidebar = ({ activeSection, setActiveSection, sidebarOpen, setSidebarOpen, pendingApprovalsCount = 0 }) => {
   const [logoutOpen, setLogoutOpen] = useState(false);

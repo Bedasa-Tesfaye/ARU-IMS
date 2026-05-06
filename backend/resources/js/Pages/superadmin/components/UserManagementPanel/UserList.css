@@ -1,0 +1,23 @@
+/* ============================================ */
+/* USER LIST - TABLE + BULK ACTIONS              */
+/* ============================================ */
+.bulk-actions-bar { background: #e8f4fd; border-radius: 12px; padding: 0.8rem 1rem; margin-bottom: 1rem; display: flex; justify-content: space-between; }
+.bulk-buttons { display: flex; gap: 0.5rem; }
+.bulk-suspend, .bulk-delete { padding: 0.4rem 1rem; border: none; border-radius: 20px; cursor: pointer; font-size: 0.8rem; }
+.bulk-suspend { background: #ffc107; color: #856404; }
+.bulk-delete { background: #dc3545; color: white; }
+.table-responsive { overflow-x: auto; }
+.user-table { width: 100%; border-collapse: collapse; }
+.user-table th, .user-table td { padding: 0.9rem 0.75rem; border-bottom: 1px solid #f0f0f0; text-align: left; vertical-align: middle; }
+.user-row:hover { background: #f8f9fa; }
+.user-cell { display: flex; align-items: center; gap: 0.8rem; }
+.user-name { font-weight: 600; }
+.user-id, .user-phone, .last-login { font-size: 0.75rem; color: #6c757d; }
+.role-badge, .status-badge { padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.75rem; font-weight: 500; display: inline-block; }
+.action-buttons { display: flex; gap: 0.3rem; }
+.action-btn { width: 32px; height: 32px; border: none; border-radius: 8px; cursor: pointer; }
+.action-btn.view { background: #e3f2fd; }
+.action-btn.edit { background: #fff3cd; }
+.action-btn.reset { background: #e8f4fd; }
+.action-btn.suspend { background: #ffe4e1; }
+.action-btn.delete { background: #fce4e4; }

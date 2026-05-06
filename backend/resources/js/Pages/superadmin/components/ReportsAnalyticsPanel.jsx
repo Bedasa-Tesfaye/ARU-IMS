@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { superAdminAPI } from '../../../services/http';
 import { COLLEGE_NAMES } from '../data/collegeDepartments';
 import ExportReportModal from './ExportReportModal';
+import './ReportsAnalyticsPanel.css';
 
 const ROLES = ['', 'student', 'company', 'examiner', 'advisor', 'admin', 'coordinator', 'super_admin'];
 

@@ -1,0 +1,149 @@
+/* ============================================ */
+/* ADVISOR OVERVIEW - HERO AND INSIGHTS         */
+/* ============================================ */
+
+.adv-hero {
+  grid-column: span 2;
+}
+
+.adv-hero-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.adv-ai-opt {
+  white-space: nowrap;
+}
+
+.adv-sub {
+  color: #64748b;
+  margin-top: 8px;
+  font-size: 0.95rem;
+}
+
+.adv-stat-row {
+  grid-column: span 2;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.adv-alert-list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.adv-alert-item {
+  margin-bottom: 8px;
+}
+
+.adv-trend-note {
+  margin-top: 12px;
+  padding: 10px;
+  background: #f8fafc;
+  border-radius: 10px;
+  font-size: 0.95rem;
+}
+
+.adv-seg-bar {
+  display: flex;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 12px 0;
+}
+
+.adv-seg-bar span {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+}
+
+.adv-seg-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.adv-insight-list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.adv-schedule-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.adv-ai-hint {
+  display: block;
+  color: #0f766e;
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+
+.adv-activity {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.adv-activity li {
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.adv-act-badge {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-right: 8px;
+}
+
+.adv-link-btn {
+  margin-top: 12px;
+  border: 0;
+  background: none;
+  color: #0d9488;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.adv-tips blockquote {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #334155;
+}
+
+.adv-tip-dots {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.adv-tip-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #cbd5e1;
+}
+
+.adv-tip-dots span.on {
+  background: #0d9488;
+}
+
+@media (max-width: 960px) {
+  .adv-hero,
+  .adv-stat-row {
+    grid-column: span 1;
+  }
+}

@@ -1,0 +1,21 @@
+/* ============================================ */
+/* AUDIT LOGS PANEL - LOGS + SYSTEM AUDIT        */
+/* ============================================ */
+.sa-audit-panel { background: #fff; border-radius: 16px; padding: 1.25rem; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06); }
+.sa-audit-tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.sa-audit-tabs button { border: 1px solid #e2e8f0; background: #f8fafc; padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; font-weight: 600; font-size: 0.85rem; }
+.sa-audit-tabs button.active { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; border-color: transparent; }
+.sa-audit-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+.sa-audit-search { flex: 1; min-width: 200px; padding: 0.55rem 0.75rem; border-radius: 10px; border: 1px solid #e2e8f0; }
+.sa-audit-filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+.sa-audit-filters select { padding: 0.45rem 0.65rem; border-radius: 8px; border: 1px solid #e2e8f0; }
+.sa-click-row { cursor: pointer; }
+.sa-click-row:hover { background: #f1f5f9; }
+.sa-pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; font-size: 0.85rem; }
+.sa-system-audit ul { padding-left: 1.25rem; }
+.sa-audit-summary-list li { margin: 0.35rem 0; }
+.sa-schedule-card { background: #f8fafc; border-radius: 12px; padding: 1rem; margin-top: 1rem; }
+.sa-top-actions { list-style: none; padding: 0; }
+.sa-top-actions li { padding: 0.35rem 0; border-bottom: 1px solid #eef2f7; }
+.sa-detail-box { background: #f8fafc; border-radius: 10px; padding: 0.75rem 1rem; margin-top: 0.75rem; }
+.sa-meta-pre { font-size: 0.75rem; overflow: auto; max-height: 200px; }

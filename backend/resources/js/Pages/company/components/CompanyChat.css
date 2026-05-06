@@ -1,0 +1,44 @@
+/* ============================================ */
+/* COMPANY CHAT - AI ASSISTANT MESSAGING        */
+/* ============================================ */
+
+.co-chat {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  min-height: 200px;
+  max-height: 320px;
+  overflow: auto;
+  background: #f9fafb;
+}
+
+.co-chat-bubble {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  max-width: 92%;
+  white-space: pre-wrap;
+}
+
+.co-chat-bubble.user {
+  margin-left: auto;
+  background: #dbeafe;
+}
+
+.co-chat-bubble.ai {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+}
+
+.co-chat-input {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.co-chat-input input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+}

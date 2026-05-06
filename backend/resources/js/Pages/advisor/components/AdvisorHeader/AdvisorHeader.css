@@ -1,0 +1,100 @@
+/* ============================================ */
+/* ADVISOR HEADER - TOPBAR                      */
+/* ============================================ */
+
+.adv-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #f0f4f8;
+}
+
+.adv-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.adv-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  flex: 1;
+}
+
+.adv-burger {
+  display: none;
+  border: 0;
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.adv-top-actions {
+  position: relative;
+}
+
+.adv-notify-btn {
+  border: 0;
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 8px 12px;
+  cursor: pointer;
+  position: relative;
+}
+
+.adv-notify-dot {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+}
+
+.adv-notify-panel {
+  position: absolute;
+  right: 0;
+  top: 110%;
+  width: min(340px, 92vw);
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.12);
+  padding: 14px;
+  z-index: 40;
+}
+
+.adv-notify-panel ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adv-notify-panel li {
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.adv-notify-panel span {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+@media (max-width: 960px) {
+  .adv-burger {
+    display: inline-block;
+  }
+}

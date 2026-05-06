@@ -4,6 +4,7 @@ import UserEditModal from './UserManagementPanel/UserEditModal';
 import UserFilters from './UserManagementPanel/UserFilters';
 import UserList from './UserManagementPanel/UserList';
 import UserSuspendModal from './UserManagementPanel/UserSuspendModal';
+import './UserManagementPanel.css';
 
 const mapSectionToRole = (section) => {
   const map = {

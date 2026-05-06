@@ -1,0 +1,52 @@
+/* ============================================ */
+/* AI ASSISTANT - COPILOT CHAT                  */
+/* ============================================ */
+
+.adv-ai-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.adv-chat {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  min-height: 220px;
+  max-height: 340px;
+  overflow: auto;
+  padding: 12px;
+}
+
+.adv-chat-bubble {
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  max-width: 92%;
+  white-space: pre-wrap;
+}
+
+.adv-chat-bubble.user {
+  margin-left: auto;
+  background: #ccfbf1;
+  color: #134e4a;
+}
+
+.adv-chat-bubble.ai {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+}
+
+.adv-chat-input {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.adv-chat-input input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}

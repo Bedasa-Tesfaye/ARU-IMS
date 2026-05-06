@@ -1,0 +1,23 @@
+/* ============================================ */
+/* EXAMINER HEADER - TITLE + SEARCH + ACTIONS   */
+/* ============================================ */
+.examiner-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.examiner-header-main h1 { margin: 6px 0; font-size: 1.5rem; }
+.examiner-breadcrumb { color: var(--ex-muted); font-size: .85rem; }
+.examiner-header-main p { margin: 0; color: var(--ex-muted); }
+.examiner-header-actions { display: flex; align-items: center; gap: 8px; }
+.examiner-search input {
+  width: 100%;
+  border: 1px solid var(--ex-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color .2s ease;
+}
+.examiner-search input:focus { border-color: var(--ex-accent); }
+.examiner-icon-btn {
+  border: 1px solid var(--ex-border);
+  background: #fff;
+  border-radius: 10px;
+  cursor: pointer;
+}

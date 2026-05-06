@@ -2,6 +2,15 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { router } from '@inertiajs/react';
 import { aiCompanyAPI, companyAPI } from '../services/http';
 import './company/CompanyDashboard.css';
+import './company/components/CompanySidebar.css';
+import './company/components/CompanyHeader.css';
+import './company/components/CompanyCards.css';
+import './company/components/CompanyStats.css';
+import './company/components/CompanyForms.css';
+import './company/components/CompanyTables.css';
+import './company/components/CompanyKanban.css';
+import './company/components/CompanyModal.css';
+import './company/components/CompanyChat.css';
 
 const NAV = [
   { id: 'overview', label: 'Dashboard', icon: '📊' },

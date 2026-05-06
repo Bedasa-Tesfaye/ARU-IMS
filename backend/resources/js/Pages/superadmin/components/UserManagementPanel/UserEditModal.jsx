@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import './UserEditModal.css';
 
 const UserEditModal = ({ user, isOpen, onClose, onSave, departments = [] }) => {
   const [formData, setFormData] = useState({});

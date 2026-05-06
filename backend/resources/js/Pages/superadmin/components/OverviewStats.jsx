@@ -1,4 +1,5 @@
 import React from 'react';
+import './OverviewStats.css';
 
 const OverviewStats = ({ stats }) => {
   const statCards = [

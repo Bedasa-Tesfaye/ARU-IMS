@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import './AIInsightsPanel.css';
 
 export default function AIInsightsPanel({ stats = {}, pendingApprovalsCount = 0 }) {
   const [dismissed, setDismissed] = useState(() => new Set());

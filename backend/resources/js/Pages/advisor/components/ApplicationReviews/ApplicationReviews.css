@@ -1,0 +1,52 @@
+/* ============================================ */
+/* APPLICATION REVIEWS - QUEUE + ASSIST         */
+/* ============================================ */
+
+.adv-review-row.pri-urgent {
+  border-left: 4px solid #ef4444;
+}
+
+.adv-review-row.pri-high {
+  border-left: 4px solid #f59e0b;
+}
+
+.adv-pri {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 8px;
+}
+
+.adv-pri.urgent {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.adv-pri.high {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.adv-pri.normal {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.adv-review-main {
+  flex: 1;
+}
+
+.adv-review-who {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.adv-feedback-draft {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-family: inherit;
+}

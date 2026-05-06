@@ -1,0 +1,31 @@
+/* ============================================ */
+/* STUDENT PROGRESS - FUNNEL VISUALS            */
+/* ============================================ */
+
+.adv-funnel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.adv-funnel-step {
+  flex: 1;
+  min-width: 100px;
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+}
+
+.adv-funnel-step span {
+  display: block;
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: capitalize;
+}
+
+.adv-funnel-step strong {
+  font-size: 1.35rem;
+  color: #0f172a;
+}

@@ -1,0 +1,54 @@
+/* ============================================ */
+/* ADVISOR ANALYTICS - REPORT METRICS           */
+/* ============================================ */
+
+.adv-report-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.adv-report-metrics div {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+}
+
+.adv-report-metrics strong {
+  display: block;
+  font-size: 1.25rem;
+}
+
+.adv-report-metrics span {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.adv-bar-chart {
+  margin-top: 12px;
+}
+
+.adv-bar-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 40px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.adv-bar-track {
+  height: 10px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.adv-bar-track span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #14b8a6, #0e7490);
+  border-radius: 999px;
+}

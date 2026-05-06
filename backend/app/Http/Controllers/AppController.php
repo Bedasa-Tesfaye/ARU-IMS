@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Inertia\Inertia;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class AppController extends Controller
 {
@@ -19,6 +20,30 @@ class AppController extends Controller
 
     public function login()
     {
+        if (Auth::guard('web')->check()) {
+            $user = Auth::guard('web')->user();
+
+            if ($user?->role === 'super_admin' || $user?->role === 'admin' || $user?->role === 'coordinator') {
+                return redirect('/superadmin');
+            }
+
+            if ($user?->role === 'student') {
+                return redirect('/student-dashboard');
+            }
+
+            if ($user?->role === 'examiner') {
+                return redirect('/examiner-dashboard');
+            }
+
+            if ($user?->role === 'advisor') {
+                return redirect('/advisor-dashboard');
+            }
+
+            if ($user?->role === 'company') {
+                return redirect('/company-dashboard');
+            }
+        }
+
         return Inertia::render('Login');
     }
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { formatDate, getRoleInfo, getStatusInfo } from '../../utils/userHelpers';
+import './UserList.css';
 
 const UserList = ({ users, onEdit, onSuspend, onDelete, onResetPassword, onViewDetails }) => {
   const [selectedUsers, setSelectedUsers] = useState(new Set());

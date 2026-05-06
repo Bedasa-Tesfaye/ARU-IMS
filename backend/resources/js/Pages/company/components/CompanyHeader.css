@@ -1,0 +1,44 @@
+/* ============================================ */
+/* COMPANY HEADER - TOP BAR                     */
+/* ============================================ */
+
+.co-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.co-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 15;
+}
+
+.co-burger {
+  display: none;
+  border: 0;
+  background: #f3f4f6;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.co-title {
+  margin: 0;
+  flex: 1;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+@media (max-width: 960px) {
+  .co-burger {
+    display: inline-block;
+  }
+}

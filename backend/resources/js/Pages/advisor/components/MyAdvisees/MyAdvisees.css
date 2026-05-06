@@ -1,0 +1,175 @@
+/* ============================================ */
+/* MY ADVISEES - FILTERS, LIST, DETAIL          */
+/* ============================================ */
+/* Shared: .adv-toolbar-row, .adv-view-toggle, .adv-two-col → AdvisorDashboard.css */
+
+.adv-nl-search {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.adv-nl-search input {
+  flex: 1;
+  min-width: 220px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.adv-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.adv-filters select,
+.adv-filters input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 0.9rem;
+}
+
+.adv-meta-bar {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.adv-table-wrap {
+  overflow-x: auto;
+}
+
+.adv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.adv-table th,
+.adv-table td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 10px 8px;
+  text-align: left;
+}
+
+.adv-table th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.adv-badge-stage {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.72rem;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.adv-badge-stage.sm {
+  font-size: 0.68rem;
+}
+
+.adv-badge-stage.profile_building {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.adv-badge-stage.applying {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.adv-badge-stage.interviewing {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.adv-badge-stage.placed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.adv-kanban-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.adv-kanban-col {
+  background: #f8fafc;
+  border-radius: 14px;
+  padding: 12px;
+  min-height: 200px;
+}
+
+.adv-kanban-col h4 {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.adv-kanban-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 8px;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+}
+
+.adv-kanban-card:focus-visible {
+  outline: 2px solid #14b8a6;
+}
+
+.adv-detail-panel {
+  grid-column: 1 / -1;
+}
+
+.adv-detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.adv-detail-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.adv-detail-tabs button {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.adv-detail-tabs button.on {
+  background: #134e4a;
+  color: #fff;
+  border-color: #134e4a;
+}
+
+.adv-detail-body {
+  margin-top: 14px;
+}
+
+.adv-action-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}

@@ -10,6 +10,7 @@ use App\Models\ExaminerVivaSession;
 use App\Models\Report;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class ExaminerController extends Controller
@@ -36,6 +37,9 @@ class ExaminerController extends Controller
             'examiner' => [
                 'id' => $examiner->id,
                 'name' => $examiner->full_name,
+                'email' => $examiner->email,
+                'phone' => $examiner->phone,
+                'specialization' => data_get($examiner->profile_data, 'specialization'),
                 'department_id' => $examiner->department_id,
                 'employee_id' => $examiner->employee_id,
             ],
@@ -107,7 +111,28 @@ class ExaminerController extends Controller
     public function evaluationQueue(Request $request)
     {
         $examiner = $this->examiner($request);
-        $queue = ExaminerReportEvaluation::query()->where('examiner_id', $examiner->id)->where('status', 'pending')->orderBy('created_at')->get();
+        $query = ExaminerReportEvaluation::query()
+            ->where('examiner_id', $examiner->id)
+            ->where('status', 'pending');
+
+        $priority = strtolower((string) $request->query('priority', 'all'));
+        if ($priority === 'urgent') {
+            $query->where(function ($q) {
+                $q->whereNotNull('deadline')->where('deadline', '<=', now()->addHours(48));
+            });
+        }
+
+        $sort = strtolower((string) $request->query('sort', 'deadline'));
+        if ($sort === 'created') {
+            $query->orderByDesc('created_at');
+        } else {
+            $query
+                ->orderByRaw('CASE WHEN deadline IS NULL THEN 1 ELSE 0 END')
+                ->orderBy('deadline')
+                ->orderBy('created_at');
+        }
+
+        $queue = $query->get();
         return response()->json($queue);
     }
 
@@ -378,5 +403,59 @@ class ExaminerController extends Controller
             'weekly_evaluation_capacity',
         ]));
         return response()->json(['message' => 'Settings updated.', 'settings' => $settings->fresh()]);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $examiner = $this->examiner($request);
+
+        $validated = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,' . $examiner->id,
+            'phone' => 'nullable|string|max:30',
+            'specialization' => 'nullable|string|max:255',
+        ])->validate();
+
+        $parts = preg_split('/\s+/', trim((string) $validated['name'])) ?: [];
+        $firstName = $parts[0] ?? $examiner->first_name;
+        $lastName = count($parts) > 1 ? implode(' ', array_slice($parts, 1)) : ($examiner->last_name ?: 'Examiner');
+
+        $profileData = is_array($examiner->profile_data) ? $examiner->profile_data : [];
+        $profileData['specialization'] = $validated['specialization'] ?? null;
+
+        $examiner->update([
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'email' => strtolower((string) $validated['email']),
+            'phone' => $validated['phone'] ?? null,
+            'profile_data' => $profileData,
+        ]);
+
+        return response()->json([
+            'message' => 'Profile updated successfully.',
+            'user' => $examiner->fresh(),
+        ]);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $examiner = $this->examiner($request);
+
+        $validated = Validator::make($request->all(), [
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:8|confirmed',
+        ])->validate();
+
+        if (!Hash::check((string) $validated['current_password'], (string) $examiner->password)) {
+            return response()->json(['message' => 'Current password is incorrect.'], 422);
+        }
+
+        $examiner->update([
+            'password' => Hash::make((string) $validated['new_password']),
+            'password_changed_at' => now(),
+            'must_change_password' => false,
+        ]);
+
+        return response()->json(['message' => 'Password changed successfully.']);
     }
 }

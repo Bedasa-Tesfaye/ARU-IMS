@@ -1,0 +1,38 @@
+/* ============================================ */
+/* EXAMINER SIDEBAR - NAVIGATION SHELL          */
+/* ============================================ */
+.examiner-sidebar {
+  background: var(--ex-dark);
+  color: #fff;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.examiner-sidebar.collapsed { width: 88px; padding: 14px 10px; }
+.examiner-sidebar-top { display: flex; align-items: center; justify-content: space-between; }
+.examiner-collapse-btn {
+  border: 1px solid var(--ex-border);
+  background: #fff;
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 6px 8px;
+}
+.examiner-nav { display: grid; gap: 8px; }
+.examiner-nav-item {
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #fff;
+  text-align: left;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all .3s cubic-bezier(.4, 0, .2, 1);
+}
+.examiner-nav-item.active, .examiner-nav-item:hover { background: var(--ex-primary); transform: translateX(2px); }
+.examiner-nav-item.logout { margin-top: auto; border: 1px solid #ffffff24; }
+.examiner-profile-chip { border: 1px solid #ffffff22; border-radius: 14px; padding: 12px; margin-top: auto; }

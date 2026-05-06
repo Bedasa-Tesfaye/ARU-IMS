@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './UserSuspendModal.css';
 
 const UserSuspendModal = ({ user, isOpen, onClose, onConfirm }) => {
   const [duration, setDuration] = useState('7');

@@ -1,0 +1,46 @@
+/* ============================================ */
+/* PROGRESS CARD - KPI AND GAUGE                */
+/* ============================================ */
+
+.adv-stat {
+  border-left: 4px solid #14b8a6;
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.adv-stat strong {
+  display: block;
+  font-size: 22px;
+}
+
+.adv-stat-animated small {
+  display: block;
+  font-size: 0.7rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.adv-gauge {
+  margin-left: auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: conic-gradient(#14b8a6 var(--pct), #e2e8f0 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #134e4a;
+}
+
+.adv-gauge span {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

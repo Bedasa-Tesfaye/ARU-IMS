@@ -2,6 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { router } from '@inertiajs/react';
 import { aiAPI, studentAPI } from '../services/http';
 import './student/StudentDashboard.css';
+import './student/components/StudentSidebar.css';
+import './student/components/StudentCards.css';
+import './student/components/StudentLists.css';
+import './student/components/StudentForms.css';
+import './student/components/StudentChat.css';
+import './student/components/StudentStats.css';
 
 const NAV = [
   { id: 'overview', label: 'Dashboard', icon: '📊' },

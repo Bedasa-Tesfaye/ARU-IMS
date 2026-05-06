@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { superAdminAPI } from '../../../services/http';
+import './AuditLogsPanel.css';
 
 const severityOptions = ['', 'info', 'warning', 'error', 'critical'];
 

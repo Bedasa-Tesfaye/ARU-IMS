@@ -97,7 +97,7 @@ class AuthController extends Controller
                     return back()->withErrors(['email' => 'Account is deactivated'])->withInput();
                 }
 
-                if ($user && $user->role === 'super_admin') {
+                if ($user && in_array($user->role, ['super_admin', 'admin', 'coordinator'], true)) {
                     return redirect('/superadmin');
                 }
 

@@ -121,7 +121,7 @@ export const examinerAPI = {
   getStudentDetail: (id) => http.get(`/api/examiner/students/${id}`),
   getStudentDeliverables: (id) => http.get(`/api/examiner/students/${id}/deliverables`),
   getStudentEvaluationHistory: (id) => http.get(`/api/examiner/students/${id}/evaluation-history`),
-  getEvaluationQueue: () => http.get('/api/examiner/evaluation-queue'),
+  getEvaluationQueue: (params) => http.get(`/api/examiner/evaluation-queue${buildQuery(params)}`),
   evaluateReport: (payload) => http.post('/api/examiner/evaluate/report', payload),
   updateEvaluation: (id, payload) => http.put(`/api/examiner/evaluate/report/${id}`, payload),
   requestRevision: (payload) => http.post('/api/examiner/evaluate/request-revision', payload),
@@ -139,6 +139,8 @@ export const examinerAPI = {
   sendMessage: (payload) => http.post('/api/examiner/messages', payload),
   getSettings: () => http.get('/api/examiner/settings'),
   updateSettings: (payload) => http.put('/api/examiner/settings', payload),
+  updateProfile: (payload) => http.put('/api/examiner/profile', payload),
+  changePassword: (payload) => http.put('/api/examiner/password', payload),
 };
 
 export const advisorAPI = {

@@ -1,0 +1,5 @@
+/* ============================================ */
+/* USER SUSPEND MODAL - TEMP/PERMANENT ACTION    */
+/* ============================================ */
+.modal-header.suspend { background: linear-gradient(135deg, #f093fb, #f5576c); }
+.btn-danger { background: #dc3545; color: white; border: none; }

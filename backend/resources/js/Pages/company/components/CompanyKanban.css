@@ -1,0 +1,47 @@
+/* ============================================ */
+/* COMPANY KANBAN - APPLICANT PIPELINE          */
+/* ============================================ */
+
+.co-kanban {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.co-kanban-col {
+  background: #f9fafb;
+  border-radius: 14px;
+  padding: 10px;
+  min-height: 220px;
+}
+
+.co-kanban-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 8px;
+  border: 1px solid #e5e7eb;
+  cursor: grab;
+}
+
+.co-gauge {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: conic-gradient(#2563eb var(--pct), #e5e7eb 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.co-gauge span {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

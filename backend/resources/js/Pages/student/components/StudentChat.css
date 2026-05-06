@@ -1,0 +1,53 @@
+/* ============================================ */
+/* STUDENT CHAT - AI ASSISTANT UI               */
+/* ============================================ */
+
+.st-chat {
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  min-height: 220px;
+  max-height: 340px;
+  overflow: auto;
+  padding: 12px;
+  background: #f8f9fa;
+  margin-bottom: 10px;
+}
+
+.st-chat-bubble {
+  max-width: 80%;
+  margin-bottom: 8px;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.st-chat-bubble.user {
+  margin-left: auto;
+  background: #dfe7ff;
+}
+
+.st-chat-bubble.ai {
+  background: #fff;
+}
+
+.st-chat-input {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.st-chat-input input {
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+@media (max-width: 768px) {
+  .st-chat {
+    min-height: 180px;
+    max-height: 260px;
+  }
+
+  .st-chat-input {
+    grid-template-columns: 1fr;
+  }
+}

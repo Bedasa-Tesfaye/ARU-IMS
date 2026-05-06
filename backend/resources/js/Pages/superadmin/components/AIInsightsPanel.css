@@ -1,0 +1,29 @@
+/* ============================================ */
+/* AI INSIGHTS PANEL - RISK + PREDICTIONS        */
+/* ============================================ */
+.sa-ai-panel { display: flex; flex-direction: column; gap: 1.25rem; }
+.sa-ai-card { background: #fff; border-radius: 16px; padding: 1.25rem 1.5rem; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06); }
+.sa-ai-tier ul { list-style: disc; padding-left: 1.25rem; }
+.sa-ai-tier li { margin: 0.35rem 0; }
+.sa-ai-dismiss { margin-left: 0.5rem; font-size: 0.72rem; border: none; background: #f1f5f9; border-radius: 6px; cursor: pointer; }
+.sa-ai-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; }
+.sa-risk-bar { height: 10px; background: #e2e8f0; border-radius: 999px; overflow: hidden; max-width: 400px; }
+.sa-risk-bar span { display: block; height: 100%; background: linear-gradient(90deg, #f59e0b, #dc2626); border-radius: 999px; }
+.sa-risk-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1rem 0; text-align: center; }
+.sa-risk-grid > div { background: #f8fafc; border-radius: 12px; padding: 0.75rem; }
+.sa-risk-pill { display: block; font-size: 0.75rem; margin-bottom: 0.35rem; }
+.sa-risk-cats { padding-left: 1.25rem; color: #475569; }
+.sa-chart-placeholder { background: #f8fafc; border-radius: 12px; padding: 1rem; margin: 0.75rem 0; }
+.sa-fake-line { height: 40px; background: linear-gradient(90deg, #e2e8f0, #c7d2fe, #e2e8f0); border-radius: 8px; }
+.sa-fake-bars { display: flex; align-items: flex-end; gap: 6px; height: 80px; }
+.sa-fake-bars span { flex: 1; background: #667eea; border-radius: 4px 4px 0 0; opacity: 0.85; }
+.sa-fake-pie { font-size: 0.85rem; color: #475569; }
+.sa-heatmap { list-style: none; padding: 0; margin: 0; }
+.sa-dept-bars { margin-top: 1rem; }
+.sa-hbar-row { display: grid; grid-template-columns: 140px 1fr 48px; align-items: center; gap: 0.75rem; margin: 0.5rem 0; font-size: 0.85rem; }
+.sa-hbar-track { height: 10px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+.sa-hbar-track span { display: block; height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); border-radius: 999px; }
+.sa-qr-grid { display: flex; gap: 1.5rem; flex-wrap: wrap; margin: 1rem 0; }
+.sa-qr-fake { text-align: center; font-size: 0.8rem; color: #64748b; }
+.sa-qr-pattern { width: 120px; height: 120px; margin: 0 auto 0.5rem; background: repeating-linear-gradient(90deg, #1e293b, #1e293b 4px, #f8fafc 4px, #f8fafc 8px), repeating-linear-gradient(0deg, #1e293b, #1e293b 4px, #f8fafc 4px, #f8fafc 8px); border-radius: 8px; }
+.sa-scan-stats { padding-left: 1.25rem; }
