@@ -665,6 +665,12 @@ class SuperAdminReportController extends Controller
                 'Software Engineering', 'Mathematics', 'Physics',
                 'Chemistry', 'Biology', 'Statistics',
             ],
+            'College of Engineering and Technology' => [
+                'Civil Engineering', 'Mechanical Engineering',
+                'Electrical and Computer Engineering', 'Chemical Engineering',
+                'Industrial Engineering', 'Architecture',
+                'Construction Technology and Management',
+            ],
             'Institute of Oromo Studies' => [
                 'Oromo Language', 'Oromo Literature',
                 'Oromo Culture and Heritage', 'Oromo History',

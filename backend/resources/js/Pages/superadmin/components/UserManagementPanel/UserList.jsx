@@ -1,53 +1,30 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { formatDate, getRoleInfo, getStatusInfo } from '../../utils/userHelpers';
 import './UserList.css';
 
-const UserList = ({ users, onEdit, onSuspend, onDelete, onResetPassword, onViewDetails }) => {
-  const [selectedUsers, setSelectedUsers] = useState(new Set());
-  const [selectAll, setSelectAll] = useState(false);
-
-  useEffect(() => {
-    setSelectedUsers(new Set());
-    setSelectAll(false);
-  }, [users]);
-
-  const handleSelectAll = () => {
-    if (selectAll) {
-      setSelectedUsers(new Set());
-      setSelectAll(false);
-      return;
-    }
-    setSelectedUsers(new Set(users.map((u) => u.id)));
-    setSelectAll(true);
-  };
-
-  const handleSelectUser = (userId) => {
-    const next = new Set(selectedUsers);
-    if (next.has(userId)) next.delete(userId);
-    else next.add(userId);
-    setSelectedUsers(next);
-    setSelectAll(next.size > 0 && next.size === users.length);
-  };
-
-  const handleBulkAction = (action) => {
-    if (selectedUsers.size === 0) return;
-    if (!window.confirm(`Are you sure you want to ${action} ${selectedUsers.size} user(s)?`)) return;
-    selectedUsers.forEach((userId) => {
-      const user = users.find((u) => u.id === userId);
-      if (!user) return;
-      if (action === 'suspend') onSuspend(user);
-      if (action === 'delete') onDelete(user);
-    });
-  };
+const UserList = ({
+  users,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectAll,
+  onBulkSuspend,
+  onBulkDelete,
+  onEdit,
+  onSuspend,
+  onDelete,
+  onResetPassword,
+  onViewDetails,
+}) => {
+  const selectAll = users.length > 0 && users.every((u) => selectedIds.has(u.id));
 
   return (
     <div className="user-list-container">
-      {selectedUsers.size > 0 && (
+      {selectedIds.size > 0 && (
         <div className="bulk-actions-bar">
-          <span>{selectedUsers.size} user(s) selected</span>
+          <span>{selectedIds.size} user(s) selected</span>
           <div className="bulk-buttons">
-            <button type="button" className="bulk-suspend" onClick={() => handleBulkAction('suspend')}>⏸️ Suspend Selected</button>
-            <button type="button" className="bulk-delete" onClick={() => handleBulkAction('delete')}>🗑️ Delete Selected</button>
+            <button type="button" className="bulk-suspend" onClick={onBulkSuspend}>⏸️ Suspend Selected</button>
+            <button type="button" className="bulk-delete" onClick={onBulkDelete}>🗑️ Delete Selected</button>
           </div>
         </div>
       )}
@@ -56,7 +33,7 @@ const UserList = ({ users, onEdit, onSuspend, onDelete, onResetPassword, onViewD
         <table className="user-table">
           <thead>
             <tr>
-              <th><input type="checkbox" checked={selectAll && users.length > 0} onChange={handleSelectAll} /></th>
+              <th><input type="checkbox" checked={selectAll && users.length > 0} onChange={onToggleSelectAll} /></th>
               <th>User</th>
               <th>Contact</th>
               <th>Role</th>
@@ -73,7 +50,7 @@ const UserList = ({ users, onEdit, onSuspend, onDelete, onResetPassword, onViewD
               const statusInfo = getStatusInfo(user.status);
               return (
                 <tr key={user.id} className="user-row">
-                  <td><input type="checkbox" checked={selectedUsers.has(user.id)} onChange={() => handleSelectUser(user.id)} /></td>
+                  <td><input type="checkbox" checked={selectedIds.has(user.id)} onChange={() => onToggleSelect(user.id)} /></td>
                   <td className="user-cell">
                     <div className="user-avatar" style={{ background: roleInfo.bg }}>{roleInfo.icon}</div>
                     <div>

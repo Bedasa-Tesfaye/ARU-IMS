@@ -13,37 +13,40 @@ import AuditLogsPanel from './superadmin/components/AuditLogsPanel';
 import SettingsPanel from './superadmin/components/SettingsPanel';
 import { normalizeUser } from './superadmin/utils/userHelpers';
 import { superAdminAPI } from '../services/http';
+import { Toaster, toast } from 'react-hot-toast';
 import './superadmin/SuperAdminDashboard.css';
 
 const SuperAdminDashboard = () => {
   const [activeSection, setActiveSection] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [generatedCredentials, setGeneratedCredentials] = useState([]);
   const [activeCredential, setActiveCredential] = useState(null);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
+  const [reportsDashboard, setReportsDashboard] = useState(null);
   const [activity, setActivity] = useState([
-    { icon: '✅', message: 'User management connected to backend', time: 'Just now' },
+    { icon: '✅', message: 'Super Admin dashboard loaded', at: new Date().toISOString() },
   ]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [credentialPolicy, setCredentialPolicy] = useState(null);
 
   const loadData = async () => {
-    setError('');
+    setLoadingDashboard(true);
     try {
-      const [usersRes, departmentsRes, approvalsRes] = await Promise.all([
+      const [usersRes, departmentsRes, approvalsRes, reportsRes] = await Promise.all([
         superAdminAPI.getUsers(),
         superAdminAPI.getDepartments(),
         superAdminAPI.getApprovalsSummary(),
+        superAdminAPI.getReportsDashboard({}),
       ]);
       setUsers((usersRes.data || []).map(normalizeUser));
       setDepartments(departmentsRes.data || []);
       setPendingApprovalsCount(approvalsRes.data?.total_pending || 0);
+      setReportsDashboard(reportsRes.data || null);
       try {
         const [logsRes, policyRes] = await Promise.all([
           superAdminAPI.getAuditLogs({}),
@@ -55,7 +58,9 @@ const SuperAdminDashboard = () => {
         // Optional sections should not block dashboard load.
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load user management data.');
+      toast.error(err.response?.data?.message || 'Failed to load user management data.');
+    } finally {
+      setLoadingDashboard(false);
     }
   };
 
@@ -96,13 +101,11 @@ const SuperAdminDashboard = () => {
   }, [users]);
 
   const addActivity = (icon, message) => {
-    setActivity((prev) => [{ icon, message, time: 'Just now' }, ...prev.slice(0, 7)]);
+    setActivity((prev) => [{ icon, message, at: new Date().toISOString() }, ...prev.slice(0, 19)]);
   };
 
   const handleRegister = async (formData, role) => {
     setIsSubmitting(true);
-    setError('');
-    setSuccess('');
     try {
       let res;
       if (role === 'student') res = await superAdminAPI.registerStudent({ ...formData, department_id: Number(formData.department_id), year: Number(formData.year), cgpa: Number(formData.cgpa) });
@@ -115,11 +118,11 @@ const SuperAdminDashboard = () => {
         setGeneratedCredentials((prev) => [credential, ...prev].slice(0, 10));
         setActiveCredential(credential);
       }
-      setSuccess(`${role} registered successfully!`);
+      toast.success(`${role} registered successfully!`);
       addActivity('✅', `${role} registered successfully`);
       await loadData();
     } catch (err) {
-      setError(err.response?.data?.message || `Failed to register ${role}`);
+      toast.error(err.response?.data?.message || `Failed to register ${role}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -127,10 +130,8 @@ const SuperAdminDashboard = () => {
 
   const handleBulkRegister = async (bulkData, role) => {
     setIsSubmitting(true);
-    setError('');
-    setSuccess('');
     try {
-      const res = await superAdminAPI.registerStudentsBulk(bulkData);
+      const res = await superAdminAPI.registerStudentsBulk({ students: bulkData });
       
       if (res?.data?.credentials) {
         const normalized = (res.data.credentials || []).map((item) => ({ ...item, role }));
@@ -139,11 +140,11 @@ const SuperAdminDashboard = () => {
           setActiveCredential(normalized[0]);
         }
       }
-      setSuccess(`${bulkData.length} ${role}s registered successfully!`);
+      toast.success(`${bulkData.length} ${role}s registered successfully!`);
       addActivity('✅', `${bulkData.length} ${role}s registered successfully`);
       await loadData();
     } catch (err) {
-      setError(err.response?.data?.message || `Failed to register ${role}s in bulk`);
+      toast.error(err.response?.data?.message || `Failed to register ${role}s in bulk`);
     } finally {
       setIsSubmitting(false);
     }
@@ -167,9 +168,9 @@ const SuperAdminDashboard = () => {
       const normalized = normalizeUser(res.data.user);
       setUsers((prev) => prev.map((user) => (user.id === normalized.id ? normalized : user)));
       addActivity('✏️', `User updated: ${normalized.name}`);
-      setSuccess('User updated successfully.');
+      toast.success('User updated successfully.');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update user.');
+      toast.error(err.response?.data?.message || 'Failed to update user.');
     }
   };
 
@@ -180,9 +181,9 @@ const SuperAdminDashboard = () => {
       setUsers((prev) => prev.map((u) => (u.id === normalized.id ? normalized : u)));
       const suffix = duration === 'permanent' ? 'permanently' : `for ${duration} days`;
       addActivity('⏸️', `User suspended: ${user.name} ${suffix}`);
-      setSuccess('User suspended successfully.');
+      toast.success('User suspended successfully.');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to suspend user.');
+      toast.error(err.response?.data?.message || 'Failed to suspend user.');
     }
   };
 
@@ -191,24 +192,22 @@ const SuperAdminDashboard = () => {
       await superAdminAPI.deleteUser(user.id);
       setUsers((prev) => prev.filter((u) => u.id !== user.id));
       addActivity('🗑️', `User deleted: ${user.name}`);
-      setSuccess('User deleted successfully.');
+      toast.success('User deleted successfully.');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete user.');
+      toast.error(err.response?.data?.message || 'Failed to delete user.');
     }
   };
 
   const handleCredentialUpdated = async (payload) => {
     setIsSubmitting(true);
-    setError('');
-    setSuccess('');
     try {
       await superAdminAPI.updateCredentialPolicy(payload);
       const res = await superAdminAPI.getCredentialPolicy();
       setCredentialPolicy(res.data);
-      setSuccess('Credential policy updated successfully.');
+      toast.success('Credential policy updated successfully.');
       addActivity('⚙️', 'Credential policy updated');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update credential policy.');
+      toast.error(err.response?.data?.message || 'Failed to update credential policy.');
     } finally {
       setIsSubmitting(false);
     }
@@ -221,25 +220,46 @@ const SuperAdminDashboard = () => {
       setGeneratedCredentials((prev) => [credentials, ...prev].slice(0, 10));
       setActiveCredential(credentials);
       addActivity('🔑', `Password reset for: ${user.name}`);
-      setSuccess('Password reset successfully.');
+      toast.success('Password reset successfully.');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to reset password.');
+      toast.error(err.response?.data?.message || 'Failed to reset password.');
     }
   };
 
   const renderContent = () => {
-    if (activeSection === 'overview') return <OverviewStats stats={stats} />;
+    if (activeSection === 'overview') {
+      return (
+        <OverviewStats
+          stats={stats}
+          pendingApprovalsCount={pendingApprovalsCount}
+          reportsDashboard={reportsDashboard}
+          activity={activity}
+          loading={loadingDashboard}
+          onNavigate={setActiveSection}
+          onQuickAction={(action) => {
+            if (action === 'backup') {
+              toast.success('Backup request queued (server job wiring pending).');
+              addActivity('💾', 'Manual backup requested');
+              return;
+            }
+            if (action === 'announce') {
+              toast('Announcements can be sent from Settings → Notifications (wiring pending).');
+              addActivity('📣', 'Announcement draft opened');
+              return;
+            }
+          }}
+        />
+      );
+    }
     if (activeSection === 'pending-approvals') {
       return (
         <PendingApprovalsPanel
           onSuccess={(msg) => {
-            setSuccess(msg);
-            setError('');
+            toast.success(msg);
             loadData();
           }}
           onError={(msg) => {
-            setError(msg);
-            setSuccess('');
+            toast.error(msg);
           }}
           onActivity={addActivity}
           onCredentialsGenerated={(cred) => {
@@ -255,12 +275,10 @@ const SuperAdminDashboard = () => {
         <AssignPanel
           allDepartments={departments}
           onSuccess={(msg) => {
-            setSuccess(msg);
-            setError('');
+            toast.success(msg);
           }}
           onError={(msg) => {
-            setError(msg);
-            setSuccess('');
+            toast.error(msg);
           }}
           onActivity={addActivity}
         />
@@ -313,6 +331,7 @@ const SuperAdminDashboard = () => {
 
   return (
     <div className="sa-dashboard-container">
+      <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
       <Sidebar
         activeSection={activeSection}
         setActiveSection={setActiveSection}
@@ -323,9 +342,6 @@ const SuperAdminDashboard = () => {
 
       <div className={`sa-main-content ${sidebarOpen ? 'expanded' : 'collapsed'}`}>
         <Header activeSection={activeSection} currentTime={currentTime} />
-
-        {error && <div className="sa-message error"><span>❌</span><span>{error}</span></div>}
-        {success && <div className="sa-message success"><span>✅</span><span>{success}</span></div>}
 
         <div className="sa-content-area">
           {renderContent()}
@@ -354,16 +370,18 @@ const SuperAdminDashboard = () => {
           </div>
         )}
 
-        <section className="activity-panel">
-          <h3>Recent Activities</h3>
-          {activity.map((item, idx) => (
-            <div key={`${item.message}-${idx}`} className="activity-item">
-              <span>{item.icon}</span>
-              <p>{item.message}</p>
-              <small>{item.time}</small>
-            </div>
-          ))}
-        </section>
+        {activeSection !== 'overview' && (
+          <section className="activity-panel">
+            <h3>Recent Activities</h3>
+            {activity.slice(0, 8).map((item, idx) => (
+              <div key={`${item.message}-${idx}`} className="activity-item">
+                <span>{item.icon}</span>
+                <p>{item.message}</p>
+                <small>{new Date(item.at || item.time || Date.now()).toLocaleString()}</small>
+              </div>
+            ))}
+          </section>
+        )}
 
         {activeCredential && (
           <CredentialsModal

@@ -12,7 +12,34 @@ const StudentRegistration = ({ departments, onRegister, onBulkRegister, isSubmit
   const [bulkMode, setBulkMode] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
   const [bulkData, setBulkData] = useState([]);
+  const [csvError, setCsvError] = useState('');
   const fileInputRef = useRef(null);
+
+  const parseCSVLine = (line) => {
+    const out = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"' && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+        continue;
+      }
+      if (ch === '"') {
+        inQuotes = !inQuotes;
+        continue;
+      }
+      if (ch === ',' && !inQuotes) {
+        out.push(cur);
+        cur = '';
+        continue;
+      }
+      cur += ch;
+    }
+    out.push(cur);
+    return out.map((v) => v.trim());
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -42,21 +69,36 @@ const StudentRegistration = ({ departments, onRegister, onBulkRegister, isSubmit
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
-    if (file && file.type === 'text/csv') {
+    const isCsv = !!file && (file.name?.toLowerCase().endsWith('.csv') || String(file.type || '').includes('csv') || String(file.type || '').startsWith('text/'));
+    if (file && isCsv) {
+      setCsvError('');
       setCsvFile(file);
       const reader = new FileReader();
       reader.onload = (event) => {
         const text = event.target.result;
-        const lines = text.split('\n');
-        const headers = lines[0].split(',').map(h => h.trim());
+        const lines = String(text || '')
+          .replace(/\r\n/g, '\n')
+          .replace(/\r/g, '\n')
+          .split('\n')
+          .filter((l) => l.trim() !== '');
+
+        const headers = parseCSVLine(lines[0] || '').map((h) => h.trim());
+        const requiredHeaders = ['full_name', 'phone', 'department_id', 'year', 'cgpa', 'student_id'];
+        const normalizedHeaders = headers.map((h) => h.toLowerCase());
+        const missing = requiredHeaders.filter((h) => !normalizedHeaders.includes(h));
+        if (missing.length) {
+          setBulkData([]);
+          setCsvError(`Missing required columns: ${missing.join(', ')}`);
+          return;
+        }
         
         const data = [];
         for (let i = 1; i < lines.length; i++) {
           if (lines[i].trim()) {
-            const values = lines[i].split(',').map(v => v.trim());
+            const values = parseCSVLine(lines[i]);
             const row = {};
             headers.forEach((header, index) => {
-              row[header] = values[index] || '';
+              row[header.trim().toLowerCase()] = values[index] || '';
             });
             data.push(row);
           }
@@ -64,6 +106,10 @@ const StudentRegistration = ({ departments, onRegister, onBulkRegister, isSubmit
         setBulkData(data);
       };
       reader.readAsText(file);
+    } else {
+      setCsvFile(null);
+      setBulkData([]);
+      setCsvError('Please select a valid .csv file.');
     }
   };
 
@@ -183,6 +229,11 @@ const StudentRegistration = ({ departments, onRegister, onBulkRegister, isSubmit
                 <div className="file-info">
                   <span className="file-name">📄 {csvFile.name}</span>
                   <span className="file-size">({(csvFile.size / 1024).toFixed(2)} KB)</span>
+                </div>
+              )}
+              {csvError && (
+                <div style={{ marginTop: '0.5rem', color: '#b91c1c', fontWeight: 700 }}>
+                  {csvError}
                 </div>
               )}
             </div>

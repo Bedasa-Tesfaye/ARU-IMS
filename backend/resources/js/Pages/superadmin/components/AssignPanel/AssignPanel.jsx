@@ -17,6 +17,7 @@ const AssignPanel = ({ allDepartments = [], onSuccess, onError, onActivity }) =>
 
   const [selectedCollegeName, setSelectedCollegeName] = useState('');
   const [selectedDepartmentName, setSelectedDepartmentName] = useState('');
+  const [staffTab, setStaffTab] = useState('examiners');
 
   const [showAssigned, setShowAssigned] = useState(false);
   const [search, setSearch] = useState('');
@@ -145,6 +146,16 @@ const AssignPanel = ({ allDepartments = [], onSuccess, onError, onActivity }) =>
     }
   };
 
+  const autoAssign = () => {
+    if (!departmentId) return;
+    const bestExaminer = [...examiners].sort((a, b) => (a.workload ?? 0) - (b.workload ?? 0))[0];
+    const bestAdvisor = [...advisors].sort((a, b) => (a.workload ?? 0) - (b.workload ?? 0))[0];
+    if (bestExaminer) setSelectedExaminerId(String(bestExaminer.id));
+    if (bestAdvisor) setSelectedAdvisorId(String(bestAdvisor.id));
+    onSuccess?.('AI auto-assign selected the lowest workload staff.');
+    onActivity?.('🤖', `AI auto-assign suggested staff for ${selectedDepartment?.name || 'department'}`);
+  };
+
   const submitAssignment = async () => {
     const student_ids = Array.from(selectedStudentIds.values());
     const payload = {
@@ -189,9 +200,14 @@ const AssignPanel = ({ allDepartments = [], onSuccess, onError, onActivity }) =>
           <h3>🧩 Assign Examiners & Advisors</h3>
           <p>Select a college, then a department, then assign staff to students in bulk.</p>
         </div>
-        <button type="button" className="btn-secondary" onClick={refresh} disabled={loading || !departmentId}>
-          {loading ? 'Loading...' : 'Refresh'}
-        </button>
+        <div className="sa-assign-header-actions">
+          <button type="button" className="sa-btn-secondary" onClick={refresh} disabled={loading || !departmentId}>
+            {loading ? 'Loading...' : 'Refresh'}
+          </button>
+          <button type="button" className="sa-btn-primary" onClick={autoAssign} disabled={loading || !departmentId}>
+            🤖 AI Auto-Assign
+          </button>
+        </div>
       </div>
 
       <div className="sa-assign-filters">
@@ -250,7 +266,7 @@ const AssignPanel = ({ allDepartments = [], onSuccess, onError, onActivity }) =>
                 <option value="asc">Asc</option>
                 <option value="desc">Desc</option>
               </select>
-              <button type="button" className="btn-secondary" disabled={!departmentId} onClick={() => loadStudents(1)}>
+              <button type="button" className="sa-btn-secondary" disabled={!departmentId} onClick={() => loadStudents(1)}>
                 Apply
               </button>
             </div>
@@ -306,7 +322,7 @@ const AssignPanel = ({ allDepartments = [], onSuccess, onError, onActivity }) =>
         </div>
       ) : (
         <div className="sa-assign-grid">
-          <div className="sa-assign-panel">
+          <div className="sa-assign-panel sa-assign-panel--students">
             <div className="sa-panel-title">
               <h4>🎓 Students</h4>
               <div className="sa-small-meta">Showing: {safe(pagination?.total, students.length)} student(s)</div>
@@ -319,8 +335,8 @@ const AssignPanel = ({ allDepartments = [], onSuccess, onError, onActivity }) =>
               </div>
             ) : (
               <>
-                <div className="table-responsive">
-                  <table className="user-table">
+                <div className="sa-table-wrap">
+                  <table className="sa-table sa-table-striped sa-table-compact">
                     <thead>
                       <tr>
                         <th>
@@ -345,7 +361,7 @@ const AssignPanel = ({ allDepartments = [], onSuccess, onError, onActivity }) =>
                         const examinerOk = !!s.examiner_id;
                         const advisorOk = !!s.advisor_id;
                         return (
-                          <tr key={s.id} className="user-row">
+                          <tr key={s.id}>
                             <td>
                               <input type="checkbox" checked={selectedStudentIds.has(s.id)} onChange={() => toggleStudent(s.id)} />
                             </td>
@@ -376,68 +392,91 @@ const AssignPanel = ({ allDepartments = [], onSuccess, onError, onActivity }) =>
             )}
           </div>
 
-          <div className="sa-assign-panel">
+          <div className="sa-assign-panel sa-assign-panel--staff">
             <div className="sa-panel-title">
               <h4>👨‍🏫 Available Examiners & Advisors</h4>
               <div className="sa-small-meta">Workload shown per staff member.</div>
             </div>
 
-            <div className="sa-staff-block">
-              <h5>Available Examiners</h5>
-              {examiners.length === 0 ? (
-                <div className="sa-empty-mini">No examiners available for this department.</div>
-              ) : (
-                <div className="sa-staff-list">
-                  {examiners.map((e) => (
-                    <button
-                      key={e.id}
-                      type="button"
-                      className={`sa-staff-card ${String(selectedExaminerId) === String(e.id) ? 'active' : ''}`}
-                      onClick={() => setSelectedExaminerId(String(e.id))}
-                    >
-                      <div>
-                        <b>{`${e.first_name} ${e.last_name}`}</b>
-                        <div className="sa-small-meta">{safe(e.email)}</div>
-                      </div>
-                      <span className={`sa-workload ${workloadTone(e.workload)}`}>{safe(e.workload, 0)} students</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              <button type="button" className="btn-primary" disabled={!canAssignExaminer || loading} onClick={() => setConfirmOpen(true)}>
-                Assign Examiner
+            <div className="sa-staff-tabs" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={staffTab === 'examiners'}
+                className={`sa-staff-tab ${staffTab === 'examiners' ? 'active' : ''}`}
+                onClick={() => setStaffTab('examiners')}
+              >
+                👨‍🏫 Examiners
+                <span className="sa-tab-count">{examiners.length}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={staffTab === 'advisors'}
+                className={`sa-staff-tab ${staffTab === 'advisors' ? 'active' : ''}`}
+                onClick={() => setStaffTab('advisors')}
+              >
+                👨‍💼 Advisors
+                <span className="sa-tab-count">{advisors.length}</span>
               </button>
             </div>
 
-            <div className="sa-staff-block">
-              <h5>Available Advisors</h5>
-              {advisors.length === 0 ? (
-                <div className="sa-empty-mini">No advisors available for this department.</div>
-              ) : (
-                <div className="sa-staff-list">
-                  {advisors.map((a) => (
-                    <button
-                      key={a.id}
-                      type="button"
-                      className={`sa-staff-card ${String(selectedAdvisorId) === String(a.id) ? 'active' : ''}`}
-                      onClick={() => setSelectedAdvisorId(String(a.id))}
-                    >
-                      <div>
-                        <b>{`${a.first_name} ${a.last_name}`}</b>
-                        <div className="sa-small-meta">{safe(a.email)}</div>
-                      </div>
-                      <span className={`sa-workload ${workloadTone(a.workload)}`}>{safe(a.workload, 0)} students</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              <button type="button" className="btn-primary" disabled={!canAssignAdvisor || loading} onClick={() => setConfirmOpen(true)}>
-                Assign Advisor
-              </button>
-            </div>
+            {staffTab === 'examiners' ? (
+              <div className="sa-staff-block">
+                {examiners.length === 0 ? (
+                  <div className="sa-empty-mini">No examiners available for this department.</div>
+                ) : (
+                  <div className="sa-staff-list">
+                    {examiners.map((e) => (
+                      <button
+                        key={e.id}
+                        type="button"
+                        className={`sa-staff-card ${String(selectedExaminerId) === String(e.id) ? 'active' : ''}`}
+                        onClick={() => setSelectedExaminerId(String(e.id))}
+                      >
+                        <div>
+                          <b>{`${e.first_name} ${e.last_name}`}</b>
+                          <div className="sa-small-meta">{safe(e.email)}</div>
+                        </div>
+                        <span className={`sa-workload ${workloadTone(e.workload)}`}>{safe(e.workload, 0)} students</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button type="button" className="sa-btn-primary" disabled={!canAssignExaminer || loading} onClick={() => setConfirmOpen(true)}>
+                  Assign Examiner
+                </button>
+              </div>
+            ) : (
+              <div className="sa-staff-block">
+                {advisors.length === 0 ? (
+                  <div className="sa-empty-mini">No advisors available for this department.</div>
+                ) : (
+                  <div className="sa-staff-list">
+                    {advisors.map((a) => (
+                      <button
+                        key={a.id}
+                        type="button"
+                        className={`sa-staff-card ${String(selectedAdvisorId) === String(a.id) ? 'active' : ''}`}
+                        onClick={() => setSelectedAdvisorId(String(a.id))}
+                      >
+                        <div>
+                          <b>{`${a.first_name} ${a.last_name}`}</b>
+                          <div className="sa-small-meta">{safe(a.email)}</div>
+                        </div>
+                        <span className={`sa-workload ${workloadTone(a.workload)}`}>{safe(a.workload, 0)} students</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button type="button" className="sa-btn-primary" disabled={!canAssignAdvisor || loading} onClick={() => setConfirmOpen(true)}>
+                  Assign Advisor
+                </button>
+              </div>
+            )}
 
             <div className="sa-both-actions">
-              <button type="button" className="btn-primary" disabled={!canAssignBoth || loading} onClick={() => setConfirmOpen(true)}>
+              <button type="button" className="sa-btn-primary" disabled={!canAssignBoth || loading} onClick={() => setConfirmOpen(true)}>
                 Assign Both (Examiner + Advisor)
               </button>
             </div>
@@ -446,15 +485,15 @@ const AssignPanel = ({ allDepartments = [], onSuccess, onError, onActivity }) =>
       )}
 
       {confirmOpen && (
-        <div className="modal-overlay" onClick={() => setConfirmOpen(false)}>
-          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+        <div className="sa-modal-overlay" onClick={() => setConfirmOpen(false)} role="dialog" aria-modal="true">
+          <div className="sa-modal sa-modal-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="sa-modal-header">
               <h3>Confirm Assignment</h3>
-              <button type="button" className="modal-close" onClick={() => setConfirmOpen(false)}>
+              <button type="button" className="sa-modal-close" onClick={() => setConfirmOpen(false)}>
                 ✕
               </button>
             </div>
-            <div className="modal-body">
+            <div className="sa-modal-body">
               <div className="sa-detail-grid">
                 <div>
                   <span>College</span>
@@ -501,11 +540,11 @@ const AssignPanel = ({ allDepartments = [], onSuccess, onError, onActivity }) =>
                 This will update selected students and record assignment history (who assigned whom and when).
               </p>
             </div>
-            <div className="modal-footer">
-              <button type="button" className="btn-secondary" onClick={() => setConfirmOpen(false)}>
+            <div className="sa-modal-footer">
+              <button type="button" className="sa-btn-secondary" onClick={() => setConfirmOpen(false)}>
                 Cancel
               </button>
-              <button type="button" className="btn-primary" onClick={submitAssignment} disabled={loading || selectedCount === 0}>
+              <button type="button" className="sa-btn-primary" onClick={submitAssignment} disabled={loading || selectedCount === 0}>
                 {loading ? 'Assigning...' : 'Confirm'}
               </button>
             </div>

@@ -61,6 +61,15 @@ export const COLLEGE_DEPARTMENTS = {
     'Biology',
     'Statistics',
   ],
+  'College of Engineering and Technology': [
+    'Civil Engineering',
+    'Mechanical Engineering',
+    'Electrical and Computer Engineering',
+    'Chemical Engineering',
+    'Industrial Engineering',
+    'Architecture',
+    'Construction Technology and Management',
+  ],
   'Institute of Oromo Studies': [
     'Oromo Language',
     'Oromo Literature',

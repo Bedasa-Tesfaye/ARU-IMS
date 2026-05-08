@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AdminAuditLog;
 use App\Models\Department;
 use App\Models\Internship;
 use App\Models\Application;
@@ -203,6 +204,30 @@ class InternshipController extends Controller
 
         $internship->save();
         $this->notifyCompanyReviewOutcome($internship, $action, (string) $request->input('review_notes', ''));
+
+        AdminAuditLog::query()->create([
+            'actor_user_id' => auth()->id(),
+            'target_user_id' => null,
+            'module' => 'approvals',
+            'action' => $action === 'approve'
+                ? 'approve_internship'
+                : ($action === 'reject' ? 'reject_internship' : 'request_internship_edit'),
+            'severity' => $action === 'reject' ? 'warning' : 'info',
+            'description' => $action === 'approve'
+                ? "Internship approved: {$internship->title}"
+                : ($action === 'reject'
+                    ? "Internship rejected: {$internship->title}"
+                    : "Internship improvement requested: {$internship->title}"),
+            'ip_address' => $request->ip(),
+            'user_agent' => (string) $request->userAgent(),
+            'meta' => [
+                'internship_id' => $internship->id,
+                'company_id' => $internship->company_id,
+                'submission_status' => $internship->submission_status,
+                'review_notes' => (string) $request->input('review_notes', ''),
+            ],
+            'created_at' => now(),
+        ]);
 
         return response()->json([
             'message' => 'Program review submitted successfully',

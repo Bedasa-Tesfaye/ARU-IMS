@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AdminAuditLog;
 use App\Models\Company;
 use App\Models\Department;
+use App\Models\Internship;
 use App\Models\User;
 use App\Services\CredentialService;
 use Illuminate\Http\Request;
@@ -344,6 +345,147 @@ class SuperAdminRegistrationController extends Controller
         ]);
     }
 
+    public function getApprovalsHistory(Request $request)
+    {
+        $this->ensureSuperAdmin($request);
+
+        $days = max(7, (int) $request->query('days', 30));
+        $since = now()->subDays($days)->startOfDay();
+
+        $logs = AdminAuditLog::query()
+            ->where('module', 'approvals')
+            ->where('created_at', '>=', $since)
+            ->whereIn('action', [
+                'approve_partner',
+                'reject_partner',
+                'approve_internship',
+                'reject_internship',
+                'request_internship_edit',
+            ])
+            ->orderBy('created_at')
+            ->get(['id', 'action', 'created_at', 'meta']);
+
+        $totals = [
+            'partner_approved' => 0,
+            'partner_rejected' => 0,
+            'internship_approved' => 0,
+            'internship_rejected' => 0,
+            'internship_improvement' => 0,
+        ];
+
+        $timeline = [];
+        foreach ($logs as $log) {
+            $date = optional($log->created_at)->toDateString() ?: now()->toDateString();
+            $timeline[$date] = $timeline[$date] ?? [
+                'date' => $date,
+                'partner_approved' => 0,
+                'partner_rejected' => 0,
+                'internship_approved' => 0,
+                'internship_rejected' => 0,
+                'internship_improvement' => 0,
+            ];
+
+            if ($log->action === 'approve_partner') {
+                $totals['partner_approved']++;
+                $timeline[$date]['partner_approved']++;
+            } elseif ($log->action === 'reject_partner') {
+                $totals['partner_rejected']++;
+                $timeline[$date]['partner_rejected']++;
+            } elseif ($log->action === 'approve_internship') {
+                $totals['internship_approved']++;
+                $timeline[$date]['internship_approved']++;
+            } elseif ($log->action === 'reject_internship') {
+                $totals['internship_rejected']++;
+                $timeline[$date]['internship_rejected']++;
+            } elseif ($log->action === 'request_internship_edit') {
+                $totals['internship_improvement']++;
+                $timeline[$date]['internship_improvement']++;
+            }
+        }
+
+        $timelineList = array_values($timeline);
+        $maxDaily = 1;
+        foreach ($timelineList as $r) {
+            $sum = (int) $r['partner_approved'] + (int) $r['partner_rejected'] + (int) $r['internship_approved'] + (int) $r['internship_rejected'] + (int) $r['internship_improvement'];
+            $maxDaily = max($maxDaily, $sum);
+        }
+
+        $partnerReviewHours = [];
+        $companyIds = $logs->filter(fn ($l) => in_array($l->action, ['approve_partner', 'reject_partner'], true))
+            ->map(fn ($l) => (int) ($l->meta['company_id'] ?? 0))
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+        $companies = Company::query()->whereIn('id', $companyIds)->get(['id', 'created_at'])->keyBy('id');
+        foreach ($logs as $log) {
+            if (!in_array($log->action, ['approve_partner', 'reject_partner'], true)) {
+                continue;
+            }
+            $companyId = (int) ($log->meta['company_id'] ?? 0);
+            $company = $companies->get($companyId);
+            if (!$company || !$company->created_at || !$log->created_at) {
+                continue;
+            }
+            $partnerReviewHours[] = max(0, $company->created_at->diffInMinutes($log->created_at) / 60);
+        }
+        $avgPartner = count($partnerReviewHours) ? round(array_sum($partnerReviewHours) / count($partnerReviewHours), 2) : null;
+
+        $avgInternship = Internship::query()
+            ->whereNotNull('reviewed_at')
+            ->whereNotNull('submission_date')
+            ->where('reviewed_at', '>=', $since)
+            ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, submission_date, reviewed_at)) as avg_h')
+            ->value('avg_h');
+        $avgInternship = $avgInternship !== null ? round((float) $avgInternship, 2) : null;
+
+        $partnerReasons = Company::query()
+            ->whereNotNull('meta->rejected_reason')
+            ->whereNotNull('meta->rejected_at')
+            ->where('meta->rejected_at', '>=', $since->toIso8601String())
+            ->get(['meta'])
+            ->map(fn ($c) => (string) ($c->meta['rejected_reason'] ?? 'Unknown'))
+            ->filter()
+            ->countBy()
+            ->sortDesc()
+            ->map(fn ($count, $reason) => ['reason' => $reason, 'count' => $count])
+            ->values()
+            ->all();
+
+        $internshipReasons = Internship::query()
+            ->whereIn('submission_status', [Internship::SUBMISSION_STATUS_REJECTED, Internship::SUBMISSION_STATUS_IMPROVEMENT])
+            ->whereNotNull('reviewed_at')
+            ->where('reviewed_at', '>=', $since)
+            ->get(['review_notes', 'submission_status'])
+            ->map(function ($i) {
+                $reason = trim((string) $i->review_notes);
+                if ($reason === '') {
+                    $reason = $i->submission_status === Internship::SUBMISSION_STATUS_IMPROVEMENT ? 'Requested improvement' : 'Rejected';
+                }
+                return $reason;
+            })
+            ->countBy()
+            ->sortDesc()
+            ->map(fn ($count, $reason) => ['reason' => $reason, 'count' => $count])
+            ->values()
+            ->all();
+
+        return response()->json([
+            'window_days' => $days,
+            'max_daily_total' => $maxDaily,
+            'totals' => $totals,
+            'timeline' => $timelineList,
+            'metrics' => [
+                'avg_partner_review_hours' => $avgPartner,
+                'avg_internship_review_hours' => $avgInternship,
+            ],
+            'top_reasons' => [
+                'partner' => $partnerReasons,
+                'internship' => $internshipReasons,
+            ],
+        ]);
+    }
+
     public function getPartnerRequests(Request $request)
     {
         $this->ensureSuperAdmin($request);
@@ -449,6 +591,29 @@ class SuperAdminRegistrationController extends Controller
         ]);
 
         return response()->json(['message' => 'Partner request rejected successfully.']);
+    }
+
+    public function requestPartnerEdit(Request $request, int $id)
+    {
+        $this->ensureSuperAdmin($request);
+        $company = Company::query()->findOrFail($id);
+
+        $validated = Validator::make($request->all(), [
+            'notes' => 'required|string|max:800',
+        ])->validate();
+
+        $meta = is_array($company->meta) ? $company->meta : [];
+        $meta['edit_requested_at'] = now()->toIso8601String();
+        $meta['edit_request_notes'] = $validated['notes'];
+        $company->meta = $meta;
+        $company->save();
+
+        $this->logAudit($request, 'approvals', 'request_partner_edit', 'info', "Partner edit requested: {$company->name}", [
+            'company_id' => $company->id,
+            'notes' => $validated['notes'],
+        ]);
+
+        return response()->json(['message' => 'Edit request sent to partner successfully.']);
     }
 
     public function generateCredentialPreview(Request $request)

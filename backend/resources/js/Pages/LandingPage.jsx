@@ -395,18 +395,106 @@ const LandingPage = () => {
               <div className="stat glass-panel"><AnimatedCounter end={100} suffix="%" /><p>Digitalized</p></div>
             </div>
           </div>
-          <div className="hero-image reveal delay-1">
-            <div className="hero-video-card parallax-element" style={{ transform: `rotateX(${mousePos.y}deg) rotateY(${-mousePos.x}deg)` }}>
-              <video autoPlay loop muted playsInline preload="metadata" className="hero-preview-video">
-                <source src={heroVideos[activeHeroIndex]} type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
-              <div className="hero-video-card-overlay">
-                <span className="hero-video-badge">Live Demo</span>
-                <p>Watch the internship portal in action</p>
-              </div>
+         <div className="hero-image reveal delay-1">
+  <div className="hero-dashboard-preview parallax-element" 
+       style={{ transform: `rotateX(${mousePos.y}deg) rotateY(${-mousePos.x}deg)` }}>
+    
+    {/* Dashboard Container */}
+    <div className="dashboard-preview">
+      
+      {/* Top Bar */}
+      <div className="preview-top-bar">
+        <div className="window-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <div className="preview-title-text">Live Dashboard</div>
+        <span className="pulse-dot"></span>
+      </div>
+
+      {/* Stats Row */}
+      <div className="preview-stats-row">
+        <div className="preview-stat">
+          <span className="preview-stat-icon">🎯</span>
+          <div>
+            <div className="preview-stat-value">150+</div>
+            <div className="preview-stat-label">Active</div>
+          </div>
+        </div>
+        <div className="preview-stat">
+          <span className="preview-stat-icon">🏢</span>
+          <div>
+            <div className="preview-stat-value">80+</div>
+            <div className="preview-stat-label">Partners</div>
+          </div>
+        </div>
+        <div className="preview-stat">
+          <span className="preview-stat-icon">👥</span>
+          <div>
+            <div className="preview-stat-value">2.5K</div>
+            <div className="preview-stat-label">Placed</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Preview Cards */}
+      <div className="preview-cards">
+        <div className="preview-card-item">
+          <div className="preview-card-dot" style={{ background: '#667eea' }}></div>
+          <div className="preview-card-content">
+            <div className="preview-card-line long"></div>
+            <div className="preview-card-line short"></div>
+            <div className="preview-card-tags">
+              <span className="preview-tag">Remote</span>
+              <span className="preview-tag">$2.5K</span>
             </div>
           </div>
+        </div>
+        <div className="preview-card-item">
+          <div className="preview-card-dot" style={{ background: '#10b981' }}></div>
+          <div className="preview-card-content">
+            <div className="preview-card-line long"></div>
+            <div className="preview-card-line short"></div>
+            <div className="preview-card-tags">
+              <span className="preview-tag">Hybrid</span>
+              <span className="preview-tag">$2K</span>
+            </div>
+          </div>
+        </div>
+        <div className="preview-card-item">
+          <div className="preview-card-dot" style={{ background: '#f59e0b' }}></div>
+          <div className="preview-card-content">
+            <div className="preview-card-line long"></div>
+            <div className="preview-card-line short"></div>
+            <div className="preview-card-tags">
+              <span className="preview-tag">On-site</span>
+              <span className="preview-tag">$1.8K</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Activity */}
+      <div className="preview-activity">
+        <div className="preview-activity-item">
+          <div className="activity-dot green"></div>
+          <span>Sarah M. applied to SE Intern</span>
+          <span className="activity-time">2m</span>
+        </div>
+        <div className="preview-activity-item">
+          <div className="activity-dot blue"></div>
+          <span>New internship posted</span>
+          <span className="activity-time">5m</span>
+        </div>
+        <div className="preview-activity-item">
+          <div className="activity-dot orange"></div>
+          <span>Interview invitation sent</span>
+          <span className="activity-time">12m</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
         </div>
       </section>
 

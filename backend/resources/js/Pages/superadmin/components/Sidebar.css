@@ -3,14 +3,14 @@
 /* ============================================ */
 .sa-sidebar {
   width: 280px;
-  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+  background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
   color: white;
   display: flex;
   flex-direction: column;
-  transition: all 0.3s ease;
-  position: fixed;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: sticky;
+  top: 0;
   height: 100vh;
-  z-index: 100;
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
 }
 .sa-sidebar.closed { width: 80px; }

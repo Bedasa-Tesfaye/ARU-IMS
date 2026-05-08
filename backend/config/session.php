@@ -155,7 +155,13 @@ return [
     |
     */
 
-    'domain' => env('SESSION_DOMAIN'),
+    'domain' => (function () {
+        $domain = env('SESSION_DOMAIN');
+        if ($domain === '' || $domain === 'null') {
+            return null;
+        }
+        return $domain;
+    })(),
 
     /*
     |--------------------------------------------------------------------------
@@ -196,6 +202,6 @@ return [
     |
     */
 
-    'same_site' => 'lax',
+    'same_site' => env('SESSION_SAME_SITE', 'lax'),
 
 ];

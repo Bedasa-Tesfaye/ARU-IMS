@@ -8,7 +8,11 @@ const UserFilters = ({
   setRoleFilter,
   statusFilter,
   setStatusFilter,
-  onExport,
+  departmentFilter,
+  setDepartmentFilter,
+  departments = [],
+  onExportCSV,
+  onExportExcel,
 }) => {
   const roles = [
     { value: '', label: 'All Roles', icon: '👥' },
@@ -51,7 +55,18 @@ const UserFilters = ({
             {statuses.map((status) => <option key={status.value || 'all'} value={status.value}>{status.icon} {status.label}</option>)}
           </select>
         </div>
-        <button type="button" className="export-btn" onClick={onExport}>📥 Export CSV</button>
+        <div className="filter-group">
+          <select value={departmentFilter} onChange={(e) => setDepartmentFilter(e.target.value)}>
+            <option value="">🏛️ All Departments</option>
+            {departments.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button type="button" className="export-btn" onClick={onExportCSV}>📥 Export CSV</button>
+        <button type="button" className="export-btn" onClick={onExportExcel}>📊 Export Excel</button>
       </div>
     </div>
   );

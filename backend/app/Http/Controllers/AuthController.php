@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Inertia\Inertia;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
@@ -85,7 +86,21 @@ class AuthController extends Controller
         }
 
         if ($isInertia || !$request->expectsJson()) {
-            if (Auth::guard('web')->attempt($credentials, $request->boolean('remember'))) {
+            $remember = $request->boolean('remember');
+            $attempted = Auth::guard('web')->attempt($credentials, $remember);
+
+            if (!$attempted) {
+                $user = User::query()
+                    ->whereRaw('lower(email) = ?', [$credentials['email']])
+                    ->first();
+
+                if ($user && Hash::check($credentials['password'], $user->password)) {
+                    Auth::guard('web')->login($user, $remember);
+                    $attempted = true;
+                }
+            }
+
+            if ($attempted) {
                 $request->session()->regenerate();
                 $user = Auth::guard('web')->user();
 
@@ -97,27 +112,36 @@ class AuthController extends Controller
                     return back()->withErrors(['email' => 'Account is deactivated'])->withInput();
                 }
 
+                $redirectTo = '/';
                 if ($user && in_array($user->role, ['super_admin', 'admin', 'coordinator'], true)) {
-                    return redirect('/superadmin');
+                    $redirectTo = '/superadmin';
                 }
 
                 if ($user && $user->role === 'student') {
-                    return redirect('/student-dashboard');
+                    $redirectTo = '/student-dashboard';
                 }
 
                 if ($user && $user->role === 'examiner') {
-                    return redirect('/examiner-dashboard');
+                    $redirectTo = '/examiner-dashboard';
                 }
 
                 if ($user && $user->role === 'advisor') {
-                    return redirect('/advisor-dashboard');
+                    $redirectTo = '/advisor-dashboard';
                 }
 
                 if ($user && $user->role === 'company') {
-                    return redirect('/company-dashboard');
+                    $redirectTo = '/company-dashboard';
                 }
 
-                return redirect('/');
+                if ($isInertia) {
+                    return Inertia::location($redirectTo);
+                }
+
+                return redirect($redirectTo);
+            }
+
+            if ($isInertia) {
+                return back()->withErrors(['email' => 'Invalid credentials'])->withInput();
             }
 
             return back()->withErrors(['email' => 'Invalid credentials'])->withInput();

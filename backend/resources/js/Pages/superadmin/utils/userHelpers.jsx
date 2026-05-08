@@ -47,7 +47,7 @@ export const normalizeUser = (user) => {
   };
 };
 
-export const filterUsers = (users, searchTerm, roleFilter, statusFilter) => {
+export const filterUsers = (users, searchTerm, roleFilter, statusFilter, departmentFilter) => {
   return users.filter((user) => {
     const matchesSearch = !searchTerm
       || user.name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -58,8 +58,9 @@ export const filterUsers = (users, searchTerm, roleFilter, statusFilter) => {
 
     const matchesRole = !roleFilter || user.role === roleFilter;
     const matchesStatus = !statusFilter || user.status === statusFilter;
+    const matchesDepartment = !departmentFilter || user.department === departmentFilter;
 
-    return matchesSearch && matchesRole && matchesStatus;
+    return matchesSearch && matchesRole && matchesStatus && matchesDepartment;
   });
 };
 
@@ -84,6 +85,53 @@ export const exportToCSV = (users) => {
   const link = document.createElement('a');
   link.href = url;
   link.download = `users_export_${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+export const exportToExcel = (users) => {
+  const esc = (value) => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const rows = users.map((u) => [
+    u.name,
+    u.email,
+    u.role,
+    u.status,
+    u.studentId || '',
+    u.employeeId || '',
+    u.department || '',
+    u.phone || '',
+    formatDate(u.lastLogin),
+  ]);
+
+  const rowXml = rows
+    .map(
+      (r) =>
+        '<Row>' +
+        r.map((c) => `<Cell><Data ss:Type="String">${esc(c)}</Data></Cell>`).join('') +
+        '</Row>'
+    )
+    .join('');
+
+  const header = ['Name', 'Email', 'Role', 'Status', 'Student ID', 'Employee ID', 'Department', 'Phone', 'Last Login']
+    .map((h) => `<Cell><Data ss:Type="String">${esc(h)}</Data></Cell>`)
+    .join('');
+
+  const xml =
+    '<?xml version="1.0"?>' +
+    '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">' +
+    '<Worksheet ss:Name="Users"><Table>' +
+    `<Row>${header}</Row>` +
+    rowXml +
+    '</Table></Worksheet>' +
+    '</Workbook>';
+
+  const blob = new Blob([xml], { type: 'application/vnd.ms-excel' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `users_export_${new Date().toISOString().split('T')[0]}.xls`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
