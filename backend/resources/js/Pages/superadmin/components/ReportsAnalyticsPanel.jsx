@@ -75,6 +75,29 @@ export default function ReportsAnalyticsPanel({ departments = [] }) {
   const [exportCtx, setExportCtx] = useState({ type: 'user_registration', title: '' });
   const [exporting, setExporting] = useState(false);
 
+  const [schedules, setSchedules] = useState(() => {
+    try {
+      const raw = localStorage.getItem('aru_sa_report_schedules');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [newSchedule, setNewSchedule] = useState({
+    enabled: true,
+    name: 'Weekly system report',
+    frequency: 'weekly', // daily | weekly | monthly
+    dayOfWeek: 'Mon',
+    time: '08:00',
+    reportType: 'user_registration',
+    format: 'pdf',
+  });
+
+  const persistSchedules = (next) => {
+    setSchedules(next);
+    localStorage.setItem('aru_sa_report_schedules', JSON.stringify(next));
+  };
+
   const queryParams = useMemo(() => {
     const p = {};
     if (departmentId) p.department_id = Number(departmentId);
@@ -536,6 +559,170 @@ export default function ReportsAnalyticsPanel({ departments = [] }) {
               </div>
             </section>
           )}
+
+          <section className="sa-report-section">
+            <div className="sa-report-section-head">
+              <h3>8. Schedule automated reports</h3>
+              <span className="sa-muted">Saved locally (server scheduler wiring pending).</span>
+            </div>
+
+            <div className="sa-kpi-row">
+              <div className="sa-kpi">
+                <span>Schedules</span>
+                <strong>{schedules.length}</strong>
+              </div>
+              <div className="sa-kpi">
+                <span>Enabled</span>
+                <strong>{schedules.filter((s) => s.enabled).length}</strong>
+              </div>
+            </div>
+
+            <div className="sa-filter-grid" style={{ marginTop: 0 }}>
+              <label>
+                Name
+                <input value={newSchedule.name} onChange={(e) => setNewSchedule((p) => ({ ...p, name: e.target.value }))} />
+              </label>
+              <label>
+                Frequency
+                <select value={newSchedule.frequency} onChange={(e) => setNewSchedule((p) => ({ ...p, frequency: e.target.value }))}>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </label>
+              <label>
+                Day (weekly)
+                <select
+                  value={newSchedule.dayOfWeek}
+                  onChange={(e) => setNewSchedule((p) => ({ ...p, dayOfWeek: e.target.value }))}
+                  disabled={newSchedule.frequency !== 'weekly'}
+                >
+                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Time
+                <input type="time" value={newSchedule.time} onChange={(e) => setNewSchedule((p) => ({ ...p, time: e.target.value }))} />
+              </label>
+              <label>
+                Report type
+                <select value={newSchedule.reportType} onChange={(e) => setNewSchedule((p) => ({ ...p, reportType: e.target.value }))}>
+                  <option value="user_registration">User registration</option>
+                  <option value="approval_pipeline">Approval pipeline</option>
+                  <option value="assignment_report">Assignment report</option>
+                  <option value="student_distribution">Student distribution</option>
+                  <option value="examiner_workload">Examiner workload</option>
+                  <option value="placement_statistics">Placement statistics</option>
+                  <option value="company_engagement">Company engagement</option>
+                </select>
+              </label>
+              <label>
+                Format
+                <select value={newSchedule.format} onChange={(e) => setNewSchedule((p) => ({ ...p, format: e.target.value }))}>
+                  <option value="pdf">PDF (HTML)</option>
+                  <option value="excel">Excel</option>
+                  <option value="csv">CSV</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="sa-filter-actions">
+              <button
+                type="button"
+                className="sa-btn-primary"
+                onClick={() => {
+                  const entry = { ...newSchedule, id: `${Date.now()}` };
+                  persistSchedules([entry, ...schedules].slice(0, 20));
+                }}
+              >
+                Add schedule
+              </button>
+              <button type="button" className="sa-btn-secondary" onClick={() => persistSchedules([])} disabled={!schedules.length}>
+                Clear schedules
+              </button>
+            </div>
+
+            <div className="sa-table-wrap" style={{ marginTop: '0.75rem' }}>
+              <table className="sa-table sa-table-striped">
+                <thead>
+                  <tr>
+                    <th>Enabled</th>
+                    <th>Name</th>
+                    <th>Frequency</th>
+                    <th>When</th>
+                    <th>Report</th>
+                    <th>Format</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {schedules.length ? (
+                    schedules.map((s) => (
+                      <tr key={s.id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={!!s.enabled}
+                            onChange={(e) => persistSchedules(schedules.map((x) => (x.id === s.id ? { ...x, enabled: e.target.checked } : x)))}
+                          />
+                        </td>
+                        <td>{s.name}</td>
+                        <td>{s.frequency}</td>
+                        <td>
+                          {s.frequency === 'weekly' ? `${s.dayOfWeek} ${s.time}` : s.frequency === 'daily' ? s.time : `1st ${s.time}`}
+                        </td>
+                        <td>{s.reportType}</td>
+                        <td>{s.format}</td>
+                        <td style={{ display: 'flex', gap: 8 }}>
+                          <button
+                            type="button"
+                            className="sa-btn-secondary sa-btn-sm"
+                            onClick={async () => {
+                              setExporting(true);
+                              try {
+                                await exportReportBlob(s.reportType, s.format, queryParams, {
+                                  includeCharts: true,
+                                  includeTables: true,
+                                  includeSummary: true,
+                                  includeAIInsights: false,
+                                  includeCover: true,
+                                  pageSize: 'A4',
+                                  orientation: 'portrait',
+                                });
+                              } catch (e) {
+                                window.alert(e.response?.data?.message || 'Export failed.');
+                              } finally {
+                                setExporting(false);
+                              }
+                            }}
+                          >
+                            Run now
+                          </button>
+                          <button
+                            type="button"
+                            className="sa-btn-danger sa-btn-sm"
+                            onClick={() => persistSchedules(schedules.filter((x) => x.id !== s.id))}
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="sa-muted">
+                        No schedules yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
         </>
       )}
 

@@ -107,6 +107,7 @@ const Header = ({
       'pending-approvals': 'Pending Approvals',
       'assign': 'Assign Examiners & Advisors',
       'reports': 'Reports & Analytics',
+      'reports-analytics': 'Reports & Analytics',
       'ai-insights': 'AI Insights & Automation',
       'audit-logs': 'Audit Logs',
     };
@@ -128,8 +129,9 @@ const Header = ({
       advisors: '👨‍💼',
       settings: '⚙️',
       'pending-approvals': '⏳',
-      'assign': '📝',
+      'assign': '🧩',
       'reports': '📈',
+      'reports-analytics': '📈',
       'ai-insights': '🤖',
       'audit-logs': '📋',
     };

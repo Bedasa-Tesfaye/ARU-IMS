@@ -18,6 +18,10 @@ class StudentMessage extends Model
         'category',
         'sentiment',
         'body',
+        'attachment_path',
+        'attachment_name',
+        'attachment_mime',
+        'attachment_size',
         'read_at',
     ];
 

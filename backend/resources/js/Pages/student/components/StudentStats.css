@@ -3,18 +3,19 @@
 /* ============================================ */
 
 .st-stat-row {
-  grid-column: span 2;
+  grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
 .st-stat {
-  background: #fff;
-  border-radius: 16px;
+  background: var(--st-surface);
+  border-radius: var(--st-radius);
   padding: 12px;
-  border-left: 4px solid #667eea;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  border-left: 4px solid var(--st-primary);
+  border: 1px solid var(--st-border);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
 }
 
 .st-stat strong {
@@ -24,7 +25,7 @@
 
 .st-stat span {
   font-size: 12px;
-  color: #6c757d;
+  color: var(--st-muted);
 }
 
 .st-chart {
@@ -49,7 +50,7 @@
 .st-chart-bar i {
   display: block;
   height: 100%;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, var(--st-primary), var(--st-primary-2));
 }
 
 .st-badge {
@@ -59,8 +60,8 @@
   margin-left: 8px;
   padding: 2px 8px;
   border-radius: 999px;
-  background: #e0e7ff;
-  color: #4338ca;
+  background: rgba(16, 185, 129, 0.14);
+  color: var(--st-text);
   vertical-align: middle;
 }
 

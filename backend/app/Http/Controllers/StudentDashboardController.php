@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Application;
+use App\Models\Department;
 use App\Models\Internship;
 use App\Models\StudentInterview;
 use App\Models\User;
@@ -95,5 +96,19 @@ class StudentDashboardController extends Controller
                     'status' => $app->status,
                 ])->values(),
         ]);
+    }
+
+    public function departments(Request $request)
+    {
+        $student = $request->user();
+        abort_unless($student && $student->role === 'student', 403, 'Only students can access this endpoint.');
+
+        return response()->json(
+            Department::query()
+                ->orderBy('name')
+                // NOTE: departments table currently contains {id, name, code}.
+                // Do not request non-existing columns (e.g., college_id) to avoid 500 errors.
+                ->get(['id', 'name', 'code'])
+        );
     }
 }

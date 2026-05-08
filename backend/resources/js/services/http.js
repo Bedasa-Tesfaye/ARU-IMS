@@ -79,6 +79,7 @@ export const internshipAPI = {
 
 export const studentAPI = {
   getOverview: () => http.get('/api/student/dashboard/overview'),
+  getDepartments: () => http.get('/api/student/departments'),
   getInternships: (params) => http.get(`/public/internships${buildQuery(params)}`),
   getApplications: (params) => http.get(`/applications${buildQuery(params)}`),
   applyInternship: (id, payload) => http.post(`/internships/${id}/apply`, payload),
@@ -91,13 +92,21 @@ export const studentAPI = {
   sendMessage: (payload) => http.post('/api/student/messages', payload),
   markMessageRead: (id) => http.put(`/api/student/messages/${id}/read`),
   getThreadSummary: (threadKey) => http.get(`/api/student/messages/thread/${threadKey}/summary`),
+  viewMessageAttachment: (id) => http.get(`/api/student/messages/${id}/attachment`, { responseType: 'blob' }),
   getDocuments: () => http.get('/api/student/documents'),
   saveDocument: (payload) => http.post('/api/student/documents', payload),
+  viewDocumentFile: (id) => http.get(`/api/student/documents/${id}/file`, { responseType: 'blob' }),
   downloadDocument: (id) => http.get(`/api/student/documents/${id}/download`, { responseType: 'blob' }),
+  deleteDocument: (id) => http.delete(`/api/student/documents/${id}`),
+  restoreDocument: (id) => http.post(`/api/student/documents/${id}/restore`),
   getProgress: () => http.get('/api/student/progress'),
   addAchievement: (payload) => http.post('/api/student/achievements', payload),
   getSettings: () => http.get('/api/student/settings'),
   updateSettings: (payload) => http.put('/api/student/settings', payload),
+  getProfile: () => http.get('/api/student/profile'),
+  updateProfile: (payload) => http.post('/api/student/profile', payload),
+  changePassword: (payload) => http.put('/api/student/password', payload),
+  deactivateAccount: () => http.post('/api/student/account/deactivate'),
 };
 
 export const aiAPI = {

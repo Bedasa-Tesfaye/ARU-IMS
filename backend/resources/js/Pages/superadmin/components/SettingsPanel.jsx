@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { toast } from 'react-hot-toast';
 import './SettingsPanel.css';
 
 export default function SettingsPanel({ credentialPolicy, onCredentialUpdated }) {
@@ -75,6 +76,31 @@ export default function SettingsPanel({ credentialPolicy, onCredentialUpdated })
     }));
   }, [credentialPolicy]);
 
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('aru_sa_settings');
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved.general) setGeneral((p) => ({ ...p, ...saved.general }));
+      if (saved.notifications) setNotifications((p) => ({ ...p, ...saved.notifications }));
+      if (saved.backup) setBackup((p) => ({ ...p, ...saved.backup }));
+      if (saved.integration) setIntegration((p) => ({ ...p, ...saved.integration }));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const persist = (patch) => {
+    try {
+      const raw = localStorage.getItem('aru_sa_settings');
+      const current = raw ? JSON.parse(raw) : {};
+      const next = { ...current, ...patch };
+      localStorage.setItem('aru_sa_settings', JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+  };
+
   const saveCredentials = async () => {
     await onCredentialUpdated?.(cred);
   };
@@ -117,7 +143,14 @@ export default function SettingsPanel({ credentialPolicy, onCredentialUpdated })
             onChange={(e) => setGeneral({ ...general, maintenanceMessage: e.target.value })}
           />
         </label>
-        <button type="button" className="sa-btn-secondary" onClick={() => window.alert('General settings are UI-only until persisted to backend.')}>
+        <button
+          type="button"
+          className="sa-btn-secondary"
+          onClick={() => {
+            persist({ general });
+            toast.success('General settings saved (local).');
+          }}
+        >
           Save general settings
         </button>
       </section>
@@ -232,7 +265,14 @@ export default function SettingsPanel({ credentialPolicy, onCredentialUpdated })
           />
           New registration alert
         </label>
-        <button type="button" className="sa-btn-secondary" onClick={() => window.alert('SMTP configuration is not persisted in this build.')}>
+        <button
+          type="button"
+          className="sa-btn-secondary"
+          onClick={() => {
+            persist({ notifications });
+            toast.success('Notification settings saved (local).');
+          }}
+        >
           Save notification settings
         </button>
       </section>
@@ -246,9 +286,21 @@ export default function SettingsPanel({ credentialPolicy, onCredentialUpdated })
         <p>
           Storage used: {backup.storageUsedGb} GB / {backup.storageTotalGb} GB (demo)
         </p>
-        <button type="button" className="sa-btn-secondary" onClick={() => window.alert('Backup jobs are configured on the server.')}>
-          Create manual backup
-        </button>
+        <div className="sa-ai-actions">
+          <button
+            type="button"
+            className="sa-btn-secondary"
+            onClick={() => {
+              persist({ backup });
+              toast.success('Backup settings saved (local).');
+            }}
+          >
+            Save backup settings
+          </button>
+          <button type="button" className="sa-btn-primary" onClick={() => toast('Manual backup request queued (wiring pending).')}>
+            Create manual backup
+          </button>
+        </div>
       </section>
 
       <section className="sa-settings-card">
@@ -256,7 +308,14 @@ export default function SettingsPanel({ credentialPolicy, onCredentialUpdated })
         <p>
           Calendar: {integration.calendar} — Email: {integration.emailProvider} — Storage: {integration.storageProvider} ({integration.bucket})
         </p>
-        <button type="button" className="sa-btn-secondary" onClick={() => window.alert('Integration connectors are placeholders.')}>
+        <button
+          type="button"
+          className="sa-btn-secondary"
+          onClick={() => {
+            persist({ integration });
+            toast.success('Integration settings saved (local).');
+          }}
+        >
           Save integration settings
         </button>
       </section>

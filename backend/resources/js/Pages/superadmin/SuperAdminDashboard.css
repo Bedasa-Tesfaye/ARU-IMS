@@ -18,18 +18,17 @@
 
 .sa-main-content {
   flex: 1;
-  margin-left: 280px;
   transition: all 0.3s;
   padding: 1.5rem;
   min-height: 100vh;
 }
 
 .sa-main-content.expanded {
-  margin-left: 280px;
+  margin-left: 0;
 }
 
 .sa-main-content.collapsed {
-  margin-left: 80px;
+  margin-left: 0;
 }
 
 .sa-content-area {
@@ -169,6 +168,12 @@
   font-size: 0.9rem;
 }
 
+.sa-btn-sm {
+  padding: 0.35rem 0.75rem;
+  border-radius: 10px;
+  font-size: 0.82rem;
+}
+
 .sa-btn-primary {
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: #fff;
@@ -216,6 +221,10 @@
   padding: 0.75rem;
   border-bottom: 1px solid #eef2f7;
   text-align: left;
+}
+
+.sa-table tbody tr:hover {
+  background: rgba(102, 126, 234, 0.06);
 }
 
 .sa-table-striped tbody tr:nth-child(even) {
@@ -278,6 +287,7 @@
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(8px);
   z-index: 2000;
   display: flex;
   align-items: center;
@@ -302,17 +312,24 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
 }
 
 .sa-modal-close {
   border: none;
-  background: #f1f5f9;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
   width: 36px;
   height: 36px;
   border-radius: 10px;
   cursor: pointer;
   font-size: 1rem;
+}
+
+.sa-modal-close:hover {
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .sa-modal-body {
@@ -334,7 +351,6 @@
 
 @media (max-width: 768px) {
   .sa-main-content {
-    margin-left: 80px;
     padding: 1rem;
   }
 }

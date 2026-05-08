@@ -7,12 +7,30 @@
   border-radius: 10px;
   padding: 8px 12px;
   color: #fff;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, var(--st-primary), var(--st-primary-2));
   cursor: pointer;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), filter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .st-btn.secondary {
-  background: #6c757d;
+  background: rgba(148, 163, 184, 0.22);
+  border: 1px solid var(--st-border);
+  color: var(--st-text);
+}
+
+.st-btn.danger {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.st-btn.ghost {
+  background: transparent;
+  border: 1px dashed var(--st-border);
+  color: var(--st-text);
+}
+
+.st-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.02);
 }
 
 .st-textarea,
@@ -20,16 +38,27 @@
 .st-card select,
 .st-card textarea {
   width: 100%;
-  border: 2px solid #e9ecef;
+  border: 1px solid var(--st-border);
   border-radius: 10px;
   padding: 10px;
   margin-bottom: 10px;
+  background: var(--st-surface);
+  color: var(--st-text);
+}
+
+.st-card input:focus,
+.st-card select:focus,
+.st-card textarea:focus {
+  outline: none;
+  border-color: rgba(16, 185, 129, 0.55);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
 }
 
 .st-actions-inline {
   margin-top: 10px;
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .st-ai-preview {

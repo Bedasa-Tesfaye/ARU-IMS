@@ -8,26 +8,56 @@
 }
 
 .st-list-item {
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--st-border);
   border-radius: 10px;
   padding: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: rgba(255, 255, 255, 0.65);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.st-list-item:hover {
+  transform: translateY(-1px);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+[data-st-theme='dark'] .st-list-item {
+  background: rgba(15, 23, 42, 0.55);
 }
 
 .st-list-item small {
   display: block;
-  color: #6c757d;
+  color: var(--st-muted);
 }
 
 .st-empty {
-  border: 1px dashed #cfd4da;
+  border: 1px dashed var(--st-border);
   border-radius: 10px;
   padding: 14px;
-  color: #6c757d;
-  background: #fafbfc;
+  color: var(--st-muted);
+  background: rgba(148, 163, 184, 0.10);
 }
+
+.st-deadline {
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--st-border);
+  background: rgba(255, 255, 255, 0.65);
+}
+
+[data-st-theme='dark'] .st-deadline {
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.st-deadline.red { border-left: 4px solid #ef4444; }
+.st-deadline.orange { border-left: 4px solid #f59e0b; }
+.st-deadline.green { border-left: 4px solid #10b981; }
 
 @media (max-width: 768px) {
   .st-list-item {

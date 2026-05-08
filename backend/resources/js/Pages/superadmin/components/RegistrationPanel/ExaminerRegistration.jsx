@@ -19,6 +19,7 @@ const ExaminerRegistration = ({ departments, onRegister, isSubmitting }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!departments || departments.length === 0) return;
     onRegister(formData, 'examiner');
   };
 
@@ -34,10 +35,20 @@ const ExaminerRegistration = ({ departments, onRegister, isSubmitting }) => {
         <div className="form-group"><label>Employee ID *</label><input type="text" value={formData.employee_id} onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })} required /></div>
         <div className="form-group">
           <label>Department *</label>
-          <select value={formData.department_id} onChange={(e) => setFormData({ ...formData, department_id: e.target.value })} required>
+          <select
+            value={formData.department_id}
+            onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
+            required
+            disabled={!departments || departments.length === 0}
+          >
             <option value="">Select Department</option>
-            {departments.map((dept) => <option key={dept.id} value={dept.id}>{dept.name}</option>)}
+            {(departments || []).map((dept) => <option key={String(dept.id)} value={String(dept.id)}>{dept.name}</option>)}
           </select>
+          {(!departments || departments.length === 0) && (
+            <small style={{ color: '#64748b', display: 'block', marginTop: 6 }}>
+              Departments unavailable. Please refresh and try again.
+            </small>
+          )}
         </div>
         <div className="form-group">
           <label>Highest Qualification *</label>
@@ -55,7 +66,9 @@ const ExaminerRegistration = ({ departments, onRegister, isSubmitting }) => {
           </select>
         </div>
       </div>
-      <button type="submit" className="btn-submit" disabled={isSubmitting}>{isSubmitting ? 'Registering...' : '👨‍🏫 Register Examiner'}</button>
+      <button type="submit" className="btn-submit" disabled={isSubmitting || !departments || departments.length === 0}>
+        {isSubmitting ? 'Registering...' : '👨‍🏫 Register Examiner'}
+      </button>
     </form>
   );
 };

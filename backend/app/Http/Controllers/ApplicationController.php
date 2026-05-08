@@ -9,6 +9,27 @@ use Illuminate\Support\Facades\Validator;
 
 class ApplicationController extends Controller
 {
+    private function inferPipelineStage(Application $app): string
+    {
+        $company = $app->internship?->company;
+        $ats = is_array($company?->meta) ? ($company->meta['ats_stages'] ?? []) : [];
+        $sid = (string) $app->id;
+
+        if (is_array($ats) && isset($ats[$sid]) && is_string($ats[$sid])) {
+            return $ats[$sid];
+        }
+
+        if ($app->status === 'approved') {
+            return 'hired';
+        }
+
+        if ($app->status === 'rejected') {
+            return 'rejected';
+        }
+
+        return 'applied';
+    }
+
     public function index(Request $request)
     {
         $this->authorize('applications.viewAny');
@@ -34,6 +55,13 @@ class ApplicationController extends Controller
 
         $applications = $query->paginate(10);
 
+        // Add a derived pipeline stage (used by Student UI tabs مثل Shortlisted/Interview/Offer)
+        $applications->getCollection()->transform(function ($app) {
+            /** @var Application $app */
+            $app->setAttribute('pipeline_stage', $this->inferPipelineStage($app));
+            return $app;
+        });
+
         return response()->json($applications);
     }
 
@@ -57,6 +85,8 @@ class ApplicationController extends Controller
         if ($user->isCompany() && (int) $application->internship->company_id !== (int) $user->company_id) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
+
+        $application->setAttribute('pipeline_stage', $this->inferPipelineStage($application));
 
         return response()->json($application);
     }

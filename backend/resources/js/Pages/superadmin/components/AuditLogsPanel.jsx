@@ -12,8 +12,10 @@ export default function AuditLogsPanel({ initialLogs = [] }) {
   const [severity, setSeverity] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [userId, setUserId] = useState('');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
   const [payload, setPayload] = useState(() =>
     initialLogs.length
       ? { data: initialLogs, current_page: 1, last_page: 1, total: initialLogs.length }
@@ -29,6 +31,9 @@ export default function AuditLogsPanel({ initialLogs = [] }) {
         module: moduleFilter || undefined,
         severity: severity || undefined,
         action: appliedSearch || undefined,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
+        user_id: userId || undefined,
       });
       setPayload(res.data);
     } catch {
@@ -36,11 +41,17 @@ export default function AuditLogsPanel({ initialLogs = [] }) {
     } finally {
       setLoading(false);
     }
-  }, [page, moduleFilter, severity, appliedSearch]);
+  }, [page, moduleFilter, severity, appliedSearch, dateFrom, dateTo, userId]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!autoRefresh || tab !== 'logs') return;
+    const t = setInterval(() => load(), 30000);
+    return () => clearInterval(t);
+  }, [autoRefresh, tab, load]);
 
   const rows = payload?.data || [];
   const lastPage = payload?.last_page || 1;
@@ -53,6 +64,48 @@ export default function AuditLogsPanel({ initialLogs = [] }) {
     const rate = rows.length ? Math.round((ok / rows.length) * 100) : 0;
     return { rate };
   }, [rows]);
+
+  const exportCurrentCsv = () => {
+    const escape = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const header = [
+      'id',
+      'timestamp',
+      'actor_user_id',
+      'target_user_id',
+      'module',
+      'action',
+      'severity',
+      'description',
+      'ip_address',
+      'user_agent',
+    ];
+    const lines = [
+      header.join(','),
+      ...rows.map((r) =>
+        [
+          r.id,
+          r.created_at,
+          r.actor_user_id,
+          r.target_user_id,
+          r.module,
+          r.action,
+          r.severity,
+          r.description,
+          r.ip_address,
+          r.user_agent,
+        ]
+          .map(escape)
+          .join(',')
+      ),
+    ].join('\n');
+    const blob = new Blob([`\uFEFF${lines}`], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `audit_logs_page_${payload?.current_page || 1}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="sa-audit-panel">
@@ -80,6 +133,13 @@ export default function AuditLogsPanel({ initialLogs = [] }) {
             />
             <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
             <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <input
+              type="number"
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+              placeholder="User ID"
+              style={{ width: 120 }}
+            />
             <button
               type="button"
               className="sa-btn-primary"
@@ -107,8 +167,12 @@ export default function AuditLogsPanel({ initialLogs = [] }) {
                 </option>
               ))}
             </select>
-            <button type="button" className="sa-btn-secondary" onClick={() => window.alert('Export logs — wire to /admin/logs export when ready.')}>
-              Export logs
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '0.85rem', color: '#334155' }}>
+              <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} />
+              Auto-refresh
+            </label>
+            <button type="button" className="sa-btn-secondary" onClick={exportCurrentCsv} disabled={!rows.length}>
+              Export (CSV)
             </button>
             <button
               type="button"
@@ -120,6 +184,7 @@ export default function AuditLogsPanel({ initialLogs = [] }) {
                 setSeverity('');
                 setDateFrom('');
                 setDateTo('');
+                setUserId('');
                 setPage(1);
               }}
             >

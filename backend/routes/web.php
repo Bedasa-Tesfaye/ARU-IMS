@@ -139,6 +139,7 @@ Route::middleware('auth:web')->group(function () {
 
     Route::prefix('api/student')->group(function () {
         Route::get('/dashboard/overview', [StudentDashboardController::class, 'overview']);
+        Route::get('/departments', [StudentDashboardController::class, 'departments']);
         Route::get('/interviews', [StudentExperienceController::class, 'interviews']);
         Route::get('/interviews/calendar', [StudentExperienceController::class, 'interviewCalendar']);
         Route::post('/interviews', [StudentExperienceController::class, 'createInterview']);
@@ -146,14 +147,22 @@ Route::middleware('auth:web')->group(function () {
         Route::get('/messages', [StudentExperienceController::class, 'messages']);
         Route::post('/messages', [StudentExperienceController::class, 'createMessage']);
         Route::put('/messages/{id}/read', [StudentExperienceController::class, 'markMessageRead']);
+        Route::get('/messages/{id}/attachment', [StudentExperienceController::class, 'viewMessageAttachment'])->name('student.message.attachment');
         Route::get('/messages/thread/{threadKey}/summary', [StudentExperienceController::class, 'threadSummary']);
         Route::get('/documents', [StudentExperienceController::class, 'documents']);
         Route::post('/documents', [StudentExperienceController::class, 'createDocument']);
+        Route::get('/documents/{id}/file', [StudentExperienceController::class, 'viewDocumentFile']);
         Route::get('/documents/{id}/download', [StudentExperienceController::class, 'downloadDocument']);
+        Route::delete('/documents/{id}', [StudentExperienceController::class, 'deleteDocument']);
+        Route::post('/documents/{id}/restore', [StudentExperienceController::class, 'restoreDocument']);
         Route::get('/progress', [StudentExperienceController::class, 'progress']);
         Route::post('/achievements', [StudentExperienceController::class, 'addAchievement']);
         Route::get('/settings', [StudentExperienceController::class, 'getSettings']);
         Route::put('/settings', [StudentExperienceController::class, 'updateSettings']);
+        Route::get('/profile', [StudentExperienceController::class, 'profile']);
+        Route::post('/profile', [StudentExperienceController::class, 'updateProfile']);
+        Route::put('/password', [StudentExperienceController::class, 'changePassword']);
+        Route::post('/account/deactivate', [StudentExperienceController::class, 'deactivateAccount']);
     });
 
     Route::prefix('api/ai')->group(function () {

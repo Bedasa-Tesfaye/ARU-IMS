@@ -76,15 +76,62 @@ class InternshipController extends Controller
             ->where('submission_status', Internship::SUBMISSION_STATUS_APPROVED)
             ->where('start_date', '>', now());
 
+        if ($request->filled('q')) {
+            $term = trim((string) $request->query('q'));
+            $query->where(function ($q) use ($term) {
+                $q->where('title', 'like', "%{$term}%")
+                    ->orWhere('description', 'like', "%{$term}%")
+                    ->orWhere('program_field', 'like', "%{$term}%")
+                    ->orWhereHas('company', fn ($cq) => $cq->where('name', 'like', "%{$term}%"));
+            });
+        }
+
+        if ($request->filled('department_id')) {
+            $departmentId = (int) $request->query('department_id');
+            $query->where(function ($q) use ($departmentId) {
+                $q->where('routing_department_id', $departmentId)
+                    ->orWhereHas('routingDepartments', fn ($dq) => $dq->where('departments.id', $departmentId));
+            });
+        }
+
         if ($request->has('type')) {
             $query->where('type', $request->type);
+        }
+
+        if ($request->filled('duration_min')) {
+            $query->where('duration_weeks', '>=', (int) $request->query('duration_min'));
+        }
+        if ($request->filled('duration_max')) {
+            $query->where('duration_weeks', '<=', (int) $request->query('duration_max'));
         }
 
         if ($request->has('location')) {
             $query->where('location', 'like', '%' . $request->location . '%');
         }
 
-        $internships = $query->paginate(12);
+        if ($request->filled('stipend_min')) {
+            $query->where('stipend', '>=', (float) $request->query('stipend_min'));
+        }
+        if ($request->filled('stipend_max')) {
+            $query->where('stipend', '<=', (float) $request->query('stipend_max'));
+        }
+
+        $sort = (string) $request->query('sort', 'ai');
+        if ($sort === 'newest') {
+            $query->orderByDesc('published_at')->orderByDesc('id');
+        } elseif ($sort === 'deadline') {
+            $query->orderBy('end_date')->orderByDesc('id');
+        } elseif ($sort === 'stipend') {
+            $query->orderByDesc('stipend')->orderByDesc('id');
+        } else {
+            // "AI recommended" default: newest first (match scoring is computed client-side for now).
+            $query->orderByDesc('published_at')->orderByDesc('id');
+        }
+
+        $perPage = (int) $request->query('per_page', 9);
+        $perPage = max(3, min(30, $perPage));
+
+        $internships = $query->paginate($perPage);
 
         return response()->json($internships);
     }

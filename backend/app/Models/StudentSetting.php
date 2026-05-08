@@ -20,6 +20,12 @@ class StudentSetting extends Model
         'high_contrast',
         'font_scale',
         'feature_toggles',
+        'notify_new_matches',
+        'notify_status_changes',
+        'notify_interview_reminders',
+        'privacy_profile_visibility',
+        'privacy_document_visibility',
+        'language',
     ];
 
     protected $casts = [
@@ -28,6 +34,9 @@ class StudentSetting extends Model
         'profile_nudges' => 'boolean',
         'share_data_for_ai' => 'boolean',
         'high_contrast' => 'boolean',
+        'notify_new_matches' => 'boolean',
+        'notify_status_changes' => 'boolean',
+        'notify_interview_reminders' => 'boolean',
         'feature_toggles' => 'array',
     ];
 }

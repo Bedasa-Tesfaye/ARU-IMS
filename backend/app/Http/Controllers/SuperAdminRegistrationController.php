@@ -775,6 +775,19 @@ class SuperAdminRegistrationController extends Controller
         if ($request->filled('action')) {
             $query->where('action', 'like', '%' . $request->query('action') . '%');
         }
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->query('date_from'));
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->query('date_to'));
+        }
+        if ($request->filled('user_id')) {
+            $userId = (int) $request->query('user_id');
+            $query->where(function ($q) use ($userId) {
+                $q->where('actor_user_id', $userId)
+                    ->orWhere('target_user_id', $userId);
+            });
+        }
 
         return response()->json($query->paginate(30));
     }
