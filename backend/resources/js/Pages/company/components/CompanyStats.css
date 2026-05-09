@@ -39,6 +39,11 @@
   color: #4b5563;
 }
 
+.co-badge.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 @media (max-width: 960px) {
   .co-stat-row {
     grid-column: span 1;

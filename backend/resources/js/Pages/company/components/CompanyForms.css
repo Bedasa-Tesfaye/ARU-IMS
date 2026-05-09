@@ -5,21 +5,33 @@
 .co-btn {
   border: 0;
   border-radius: 10px;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  background: linear-gradient(135deg, var(--co-primary), var(--co-primary-2));
   color: #fff;
   padding: 8px 14px;
   cursor: pointer;
   font-weight: 600;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.co-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(102, 126, 234, 0.25);
 }
 
 .co-btn.secondary {
-  background: #6b7280;
+  background: #64748b;
 }
 
 .co-btn.ghost {
   background: transparent;
-  border: 1px solid #e5e7eb;
-  color: #2563eb;
+  border: 1px solid var(--co-border);
+  color: #334155;
+}
+
+.co-btn.ghost:hover {
+  border-color: #cbd5e1;
+  color: #1e293b;
+  box-shadow: none;
 }
 
 .co-btn-sm {
@@ -39,7 +51,7 @@
   gap: 4px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #374151;
+  color: #334155;
 }
 
 .co-form-grid input,
@@ -47,8 +59,19 @@
 .co-form-grid textarea {
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--co-border);
   font-weight: 400;
+  background: #fff;
+}
+
+.co-form-grid input:focus,
+.co-form-grid select:focus,
+.co-form-grid textarea:focus,
+.co-modal textarea:focus,
+.co-chat-input input:focus {
+  outline: none;
+  border-color: #a5b4fc;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 .co-steps {
@@ -61,14 +84,14 @@
 .co-step-pill {
   padding: 6px 12px;
   border-radius: 999px;
-  background: #f3f4f6;
+  background: #f8fafc;
   font-size: 0.85rem;
   cursor: pointer;
   border: 1px solid transparent;
 }
 
 .co-step-pill.on {
-  background: #dbeafe;
-  border-color: #93c5fd;
-  color: #1e40af;
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #3730a3;
 }

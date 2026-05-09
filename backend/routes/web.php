@@ -239,7 +239,10 @@ Route::middleware('auth:web')->group(function () {
         Route::post('/applicants/{id}/approve', [CompanyController::class, 'approveApplication']);
         Route::post('/applicants/{id}/reject', [CompanyController::class, 'rejectApplication']);
         Route::get('/interns', [CompanyController::class, 'interns']);
+        Route::get('/interns/history', [CompanyController::class, 'internHistory']);
         Route::get('/interns/{id}', [CompanyController::class, 'internDetail']);
+        Route::post('/interns/{applicationId}/terminate', [CompanyController::class, 'terminateIntern']);
+        Route::post('/interns/{applicationId}/complete', [CompanyController::class, 'completeIntern']);
         Route::post('/interns/{id}/evaluate', [CompanyController::class, 'evaluateIntern']);
         Route::get('/interns/{id}/evaluations', [CompanyController::class, 'internEvaluations']);
         Route::get('/messages', [CompanyController::class, 'messages']);

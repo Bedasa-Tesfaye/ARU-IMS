@@ -3,45 +3,63 @@
 /* ============================================ */
 
 :root {
-  --co-primary: #f59e0b;
-  --co-bg: #fffbeb;
+  --co-primary: #667eea;
+  --co-primary-2: #764ba2;
+  --co-bg: #f1f5f9;
   --co-surface: #ffffff;
-  --co-text: #111827;
-  --co-muted: #6b7280;
-  --co-border: #e5e7eb;
+  --co-text: #0f172a;
+  --co-muted: #64748b;
+  --co-border: #e2e8f0;
 }
 
 .co-layout {
   display: grid;
   grid-template-columns: 280px 1fr;
   min-height: 100vh;
-  background: #f4f6fb;
+  background: var(--co-bg);
 }
 
 .co-main {
-  padding: 20px;
+  padding: 1.25rem;
+}
+
+.co-main > .co-card,
+.co-main > .co-grid,
+.co-main > div > .co-card {
+  animation: coFadeIn 160ms ease-out;
 }
 
 .co-grid {
   display: grid;
-  gap: 16px;
+  gap: 1rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .co-toast {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
-  padding: 12px 18px;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  padding: 0.75rem 1rem;
   border-radius: 12px;
-  background: #1e3a5f;
+  background: #1e293b;
   color: #fff;
-  z-index: 120;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  z-index: 300;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.24);
 }
 
 .co-toast.error {
-  background: #b91c1c;
+  background: #dc2626;
+}
+
+@keyframes coFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 960px) {
@@ -51,5 +69,9 @@
 
   .co-grid {
     grid-template-columns: 1fr;
+  }
+
+  .co-main {
+    padding: 1rem;
   }
 }

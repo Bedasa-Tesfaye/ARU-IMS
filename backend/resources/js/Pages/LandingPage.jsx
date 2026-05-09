@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from '@inertiajs/react';
+import { studentAPI } from '../services/http';
 import './LandingPage.css';
 
 // Assets from public folder
@@ -75,11 +76,25 @@ const LandingPage = () => {
   const [apiLoading, setApiLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/public/internships')
-      .then(res => res.json())
-      .then(data => {
-        console.log('API Internships received:', data.data?.length || 0);
-        const mapped = (data.data || []).map(item => ({
+    const typeLabel = (rawType, workModality) => {
+      const t = String(rawType || '').toLowerCase();
+      if (t === 'full-time' || t === 'fulltime') return 'Full-time';
+      if (t === 'part-time' || t === 'parttime') return 'Part-time';
+      if (t === 'hybrid') return 'Hybrid';
+      if (t === 'remote') return 'Remote';
+      // Some records use work_modality; show On-site when possible
+      const wm = String(workModality || '').toLowerCase();
+      if (wm === 'on-site' || wm === 'onsite' || wm === 'on_site') return 'On-site';
+      return rawType || 'Full-time';
+    };
+
+    const load = async () => {
+      try {
+        const res = await studentAPI.getInternships({ per_page: 30, sort: 'newest' });
+        const payload = res?.data || {};
+        const rows = Array.isArray(payload?.data) ? payload.data : Array.isArray(payload) ? payload : [];
+        console.log('API Internships received:', rows.length);
+        const mapped = rows.map((item) => ({
           id: `api-${item.id}`,
           company: item.company?.name || 'Company',
           initials: (item.company?.name || 'CO').substring(0, 2).toUpperCase(),
@@ -87,7 +102,7 @@ const LandingPage = () => {
           department: item.program_field || 'General',
           title: item.title || 'Untitled',
           location: item.location || 'Addis Ababa',
-          type: item.type || 'Full-time',
+          type: typeLabel(item.type, item.work_modality),
           duration: `${item.duration_weeks || 12} weeks`,
           stipend: item.stipend ? `ETB ${Number(item.stipend).toLocaleString()}/month` : 'Negotiable',
           deadline: item.end_date || '2026-12-31',
@@ -103,12 +118,14 @@ const LandingPage = () => {
         }));
         console.log('Mapped internships:', mapped.length);
         setApiInternships(mapped);
-        setApiLoading(false);
-      })
-      .catch(err => {
+      } catch (err) {
         console.error('API fetch error:', err);
+      } finally {
         setApiLoading(false);
-      });
+      }
+    };
+
+    load();
   }, []);
 
   const scrollToSection = (sectionId) => {
@@ -195,7 +212,9 @@ const LandingPage = () => {
   const stipendNum = (s) => { const m = String(s).match(/[\d,]+/); return m ? parseInt(m[0].replace(/,/g, ''), 10) : 0; };
 
   const allInternships = useMemo(() => {
-    return [...internshipListings, ...apiInternships];
+    // Prefer real approved programs from backend; fall back to demo items if API returns none.
+    if (apiInternships.length) return apiInternships;
+    return internshipListings;
   }, [apiInternships]);
 
   const filteredInternships = useMemo(() => {
@@ -207,11 +226,11 @@ const LandingPage = () => {
     if (typeFilter !== 'all') list = list.filter((i) => i.type === typeFilter);
     if (quickChip === 'tech') list = list.filter((i) => i.skills.some((sk) => /react|node|mongo|software|data|git|telecom/i.test(sk)) || /software|developer|data|telecom|it/i.test(i.title));
     else if (quickChip === 'finance') list = list.filter((i) => /finance|accounting|bank|banking/i.test(`${i.title} ${i.department}`));
-    else if (quickChip === 'hybrid') list = list.filter((i) => i.type === 'Hybrid');
+    else if (quickChip === 'hybrid') list = list.filter((i) => String(i.type || '').toLowerCase() === 'hybrid');
     return [...list].sort((a, b) => {
       if (sortBy === 'deadline') return new Date(a.deadline) - new Date(b.deadline);
       if (sortBy === 'stipend') return stipendNum(b.stipend) - stipendNum(a.stipend);
-      if (sortBy === 'recent') return b.id - a.id;
+      if (sortBy === 'recent') return String(b.id).localeCompare(String(a.id));
       return a.id - b.id;
     });
   }, [allInternships, internshipSearch, typeFilter, quickChip, sortBy]);
@@ -366,7 +385,7 @@ const LandingPage = () => {
                     const urgency = getDeadlineUrgency(internship.deadline);
                     const saved = savedInternships.includes(internship.id);
                     return (
-                      <div key={internship.id} className={`internship-card premium-card animated-border reveal ${isExpanded ? 'expanded' : ''} ${internship.featured ? 'featured' : ''}`}>
+                      <div key={internship.id} className={`internship-card premium-card animated-border ${isExpanded ? 'expanded' : ''} ${internship.featured ? 'featured' : ''}`}>
                         {internship.featured && <div className="featured-ribbon">Featured</div>}
                         <div className="card-inner">
                           <div className="card-top-row">

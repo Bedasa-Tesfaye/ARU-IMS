@@ -108,10 +108,21 @@ class Internship extends Model
 
     public function isAvailable()
     {
-        return $this->status === 'active' &&
-               $this->submission_status === self::SUBMISSION_STATUS_APPROVED &&
-               $this->current_applicants < $this->max_applicants &&
-               $this->start_date > now();
+        $capacity = max(1, (int) ($this->max_applicants ?? 1));
+
+        // Application window:
+        // - Prefer explicit SLA deadline if set
+        // - Otherwise allow applying until the program ends (end_date)
+        // If an SLA deadline exists but is already past (data entry or migrated records),
+        // fall back to end_date to avoid blocking all applications unintentionally.
+        $deadlineOk = ($this->sla_deadline_at && $this->sla_deadline_at->isFuture())
+            ? true
+            : ($this->end_date ? $this->end_date->isFuture() : true);
+
+        return $this->status === 'active'
+            && $this->submission_status === self::SUBMISSION_STATUS_APPROVED
+            && (int) ($this->current_applicants ?? 0) < $capacity
+            && $deadlineOk;
     }
 
     public function getIsAvailableAttribute()

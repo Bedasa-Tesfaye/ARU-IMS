@@ -15,11 +15,13 @@ import './company/components/CompanyChat.css';
 const NAV = [
   { id: 'overview', label: 'Dashboard', icon: '📊' },
   { id: 'notifications', label: 'Notifications', icon: '🔔' },
+  { id: 'requests', label: 'Requests', icon: '📥' },
   { id: 'post', label: 'Post Internship', icon: '📋' },
   { id: 'manage', label: 'Manage Internships', icon: '📝' },
   { id: 'applicants', label: 'Applicants', icon: '👨‍🎓' },
   { id: 'find', label: 'Find Candidates', icon: '🔍' },
   { id: 'interns', label: 'Current Interns', icon: '👥' },
+  { id: 'intern-history', label: 'Intern History', icon: '🗂️' },
   { id: 'evaluations', label: 'Intern Evaluations', icon: '📊' },
   { id: 'messages', label: 'Messages/Chat', icon: '💬' },
   { id: 'schedule', label: 'Schedule', icon: '📅' },
@@ -30,6 +32,24 @@ const NAV = [
 ];
 
 const PIPELINE_COLS = ['applied', 'screening', 'shortlisted', 'interview', 'offer', 'hired', 'rejected'];
+const SECTION_SUBTITLE = {
+  overview: 'Live company operations summary',
+  notifications: 'Alerts and updates from internship workflow',
+  requests: 'Incoming student requests requiring decisions',
+  post: 'Create and submit internship programs',
+  manage: 'Manage posted internship programs',
+  applicants: 'Screen and decide on applicants',
+  find: 'Search students by relevance',
+  interns: 'Manage active interns lifecycle',
+  'intern-history': 'Completed and terminated placements',
+  evaluations: 'Track intern performance reviews',
+  messages: 'Communicate with students',
+  schedule: 'Plan interviews and check-ins',
+  analytics: 'Performance and recruitment insights',
+  profile: 'Company profile information',
+  ai: 'AI assistant for recruiting tasks',
+  settings: 'Preferences and security settings',
+};
 
 function normalizePaginated(res) {
   const d = res?.data;
@@ -96,11 +116,18 @@ const CompanyDashboard = () => {
   const [internships, setInternships] = useState([]);
   const [applicants, setApplicants] = useState([]);
   const [interns, setInterns] = useState([]);
+  const [internHistory, setInternHistory] = useState([]);
+  const [internSearch, setInternSearch] = useState('');
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyFilter, setHistoryFilter] = useState('all');
+  const [internAction, setInternAction] = useState(null); // { type:'terminate'|'complete', row }
+  const [internActionNote, setInternActionNote] = useState('');
   const [messages, setMessages] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [profile, setProfile] = useState(null);
   const [settings, setSettings] = useState(null);
+  const [profileDraft, setProfileDraft] = useState({ name: '', industry: '', description: '' });
   const [pwd, setPwd] = useState({ current_password: '', new_password: '', new_password_confirmation: '' });
   const [postStep, setPostStep] = useState(1);
   const [postDraft, setPostDraft] = useState({
@@ -156,26 +183,39 @@ const CompanyDashboard = () => {
   const loadCore = useCallback(async () => {
     setLoading(true);
     try {
-      const [dashRes, intsRes, appsRes, internsRes, msgRes, anaRes, profRes, setRes] = await Promise.all([
+      const [dashRes, intsRes, appsRes, internsRes, historyRes, msgRes, anaRes, profRes, setRes] = await Promise.allSettled([
         companyAPI.getDashboardStats(),
         companyAPI.getInternships({ per_page: 50 }),
         companyAPI.getApplicants({ per_page: 100 }),
         companyAPI.getInterns({ per_page: 50 }),
+        companyAPI.getInternHistory({ per_page: 100 }),
         companyAPI.getMessages({}),
         companyAPI.getAnalytics(),
         companyAPI.getProfile(),
         companyAPI.getSettings(),
       ]);
-      setDashboard(dashRes.data);
-      setInternships(normalizePaginated(intsRes).data);
-      const appsData = normalizePaginated(appsRes);
-      console.log('Applicants loaded:', appsData.data?.length, appsData.data);
-      setApplicants(appsData.data);
-      setInterns(normalizePaginated(internsRes).data);
-      setMessages(normalizePaginated(msgRes).data);
-      setAnalytics(anaRes.data);
-      setProfile(profRes.data);
-      setSettings(setRes.data);
+
+      if (dashRes.status === 'fulfilled') setDashboard(dashRes.value.data);
+      if (intsRes.status === 'fulfilled') setInternships(normalizePaginated(intsRes.value).data);
+      if (appsRes.status === 'fulfilled') {
+        const appsData = normalizePaginated(appsRes.value);
+        setApplicants(appsData.data);
+      }
+      if (internsRes.status === 'fulfilled') {
+        setInterns(normalizePaginated(internsRes.value).data);
+      } else {
+        setInterns([]);
+        showToast('Could not load current interns.', 'error');
+      }
+      if (historyRes.status === 'fulfilled') {
+        setInternHistory(normalizePaginated(historyRes.value).data);
+      } else {
+        setInternHistory([]);
+      }
+      if (msgRes.status === 'fulfilled') setMessages(normalizePaginated(msgRes.value).data);
+      if (anaRes.status === 'fulfilled') setAnalytics(anaRes.value.data);
+      if (profRes.status === 'fulfilled') setProfile(profRes.value.data);
+      if (setRes.status === 'fulfilled') setSettings(setRes.value.data);
     } catch (e) {
       showToast(e?.response?.data?.message || 'Failed to load company workspace.', 'error');
     } finally {
@@ -190,6 +230,14 @@ const CompanyDashboard = () => {
       console.warn('Failed to load notifications', e);
     }
   }, [showToast]);
+
+  useEffect(() => {
+    setProfileDraft({
+      name: profile?.company?.name || '',
+      industry: profile?.company?.industry || '',
+      description: profile?.company?.description || '',
+    });
+  }, [profile]);
 
   const markNotificationRead = async (id) => {
     try {
@@ -233,6 +281,25 @@ const CompanyDashboard = () => {
       showToast('Could not load applicant.', 'error');
     } finally {
       setBusy('');
+    }
+  };
+
+  const performDecision = async ({ type, applicantId, reason }) => {
+    const id = applicantId;
+    try {
+      if (type === 'approve') {
+        await companyAPI.approveApplicant(id);
+        showToast('Approved! Student moved to Current Interns.');
+        setActive('interns');
+      } else {
+        await companyAPI.rejectApplicant(id, reason || '');
+        showToast('Rejected.');
+      }
+      setDecisionModal(null);
+      setSelectedApplicant(null);
+      await loadCore();
+    } catch (e) {
+      showToast(e?.response?.data?.error || `Failed to ${type}.`, 'error');
     }
   };
 
@@ -310,8 +377,176 @@ const CompanyDashboard = () => {
     try {
       const res = await companyAPI.searchStudents({ q: findQuery, per_page: 30 });
       setFindResults(normalizePaginated(res).data);
+    } catch (e) {
+      showToast(e?.response?.data?.error || 'Search failed.', 'error');
     } finally {
       setBusy('');
+    }
+  };
+
+  const optimizePosting = async () => {
+    try {
+      const r = await aiCompanyAPI.optimizePosting({});
+      showToast(r.data?.keywords?.join(', ') || 'Posting optimized!');
+    } catch (e) {
+      showToast(e?.response?.data?.error || 'AI optimizer failed.', 'error');
+    }
+  };
+
+  const generateDescription = async () => {
+    try {
+      const r = await aiCompanyAPI.generateJobDescription({ role_type: postDraft.title });
+      setPostDraft((d) => ({ ...d, description: r.data?.description || d.description }));
+      showToast('AI description generated.');
+    } catch (e) {
+      showToast(e?.response?.data?.error || 'AI description generation failed.', 'error');
+    }
+  };
+
+  const submitExistingInternshipForApproval = async (internshipId) => {
+    try {
+      await companyAPI.submitInternshipForApproval(internshipId);
+      showToast('Submitted for approval! 🚀');
+      await loadCore();
+    } catch (e) {
+      showToast(e?.response?.data?.error || 'Submit failed.', 'error');
+    }
+  };
+
+  const deleteInternship = async (internshipId) => {
+    if (!window.confirm('Delete this internship posting?')) return;
+    try {
+      await companyAPI.deleteInternship(internshipId);
+      showToast('Internship deleted.');
+      await loadCore();
+    } catch (e) {
+      showToast(e?.response?.data?.error || 'Delete failed.', 'error');
+    }
+  };
+
+  const saveToTalentPool = async (studentId) => {
+    try {
+      await companyAPI.addTalentPool({ student_id: studentId });
+      showToast('Saved to talent pool');
+    } catch (e) {
+      showToast(e?.response?.data?.error || 'Save failed.', 'error');
+    }
+  };
+
+  const submitEvaluation = async () => {
+    const sid = Number(evalDraft.student_id);
+    if (!sid) return showToast('Enter a valid student user ID.', 'error');
+    try {
+      await companyAPI.evaluateIntern(sid, {
+        type: evalDraft.type,
+        technical_skills: evalDraft.technical_skills,
+        communication_skills: evalDraft.communication_skills,
+        problem_solving: evalDraft.problem_solving,
+        teamwork: evalDraft.teamwork,
+        time_management: evalDraft.time_management,
+        strengths: evalDraft.strengths,
+        weaknesses: evalDraft.weaknesses,
+        recommendations: evalDraft.recommendations,
+        evaluation_date: evalDraft.evaluation_date,
+      });
+      showToast('Evaluation saved');
+    } catch (e) {
+      showToast(e?.response?.data?.error || 'Evaluation failed.', 'error');
+    }
+  };
+
+  const aiDraftEvaluation = async () => {
+    try {
+      const r = await aiCompanyAPI.generateEvaluation({});
+      setEvalDraft((d) => ({ ...d, strengths: r.data?.draft || d.strengths }));
+    } catch (e) {
+      showToast(e?.response?.data?.error || 'AI draft failed.', 'error');
+    }
+  };
+
+  const sendMessageToStudent = async () => {
+    const sid = Number(msgDraft.student_id);
+    if (!sid || !msgDraft.body.trim()) return showToast('Enter student ID and message.', 'error');
+    try {
+      await companyAPI.sendMessage({ student_id: sid, body: msgDraft.body });
+      showToast('Sent');
+      setMsgDraft((d) => ({ ...d, body: '' }));
+      const res = await companyAPI.getMessages({});
+      setMessages(normalizePaginated(res).data);
+    } catch (e) {
+      showToast(e?.response?.data?.error || 'Send failed.', 'error');
+    }
+  };
+
+  const aiSuggestReply = async () => {
+    try {
+      const r = await aiCompanyAPI.suggestReply({});
+      setMsgDraft((d) => ({ ...d, body: r.data?.suggested_reply || d.body }));
+    } catch (e) {
+      showToast(e?.response?.data?.error || 'AI suggestion failed.', 'error');
+    }
+  };
+
+  const saveInterview = async () => {
+    const applicationId = Number(scheduleDraft.application_id);
+    if (!applicationId || !scheduleDraft.scheduled_at) return showToast('Application ID and date/time are required.', 'error');
+    try {
+      await companyAPI.createSchedule({
+        application_id: applicationId,
+        scheduled_at: scheduleDraft.scheduled_at,
+        notes: scheduleDraft.notes,
+      });
+      showToast('Scheduled');
+      setScheduleDraft((d) => ({ ...d, notes: '' }));
+    } catch (e) {
+      showToast(e?.response?.data?.error || 'Scheduling failed.', 'error');
+    }
+  };
+
+  const queueRecruitmentReport = async () => {
+    try {
+      await companyAPI.generateReport({ type: 'recruitment' });
+      showToast('Report queued');
+    } catch (e) {
+      showToast(e?.response?.data?.error || 'Report request failed.', 'error');
+    }
+  };
+
+  const saveProfile = async () => {
+    try {
+      await companyAPI.updateProfile(profileDraft);
+      showToast('Profile saved');
+      await loadCore();
+    } catch (e) {
+      showToast(e?.response?.data?.error || 'Profile save failed.', 'error');
+    }
+  };
+
+  const showMarketInsights = async () => {
+    try {
+      const r = await aiCompanyAPI.marketInsights();
+      showToast(r.data?.stipend_benchmark?.slice(0, 80) || 'Market insights ready.');
+    } catch (e) {
+      showToast(e?.response?.data?.error || 'Could not fetch market insights.', 'error');
+    }
+  };
+
+  const updateCompanySetting = async (key, value) => {
+    try {
+      const r = await companyAPI.updateSettings({ [key]: value });
+      setSettings(r.data?.settings ?? settings);
+      showToast('Settings saved');
+    } catch (e) {
+      showToast(e?.response?.data?.error || 'Settings update failed.', 'error');
+    }
+  };
+
+  const runInternRiskMonitor = async () => {
+    try {
+      const r = await aiCompanyAPI.internPerformancePredict({});
+      showToast(`Risk ${r.data?.risk_score ?? 'N/A'}`);
+    } catch (e) {
+      showToast(e?.response?.data?.error || 'AI monitor failed.', 'error');
     }
   };
 
@@ -376,14 +611,151 @@ const CompanyDashboard = () => {
                   <strong>{n.title}</strong>
                   <div className="co-muted">{n.message}</div>
                 </span>
+                <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  {n?.type === 'internship_application' && n?.meta?.application_id && (
+                    <>
+                      <button
+                        className="co-btn ghost co-btn-sm"
+                        type="button"
+                        onClick={() => {
+                          setActive('requests');
+                          openApplicant(n.meta.application_id);
+                        }}
+                      >
+                        Open request
+                      </button>
+                      <button
+                        className="co-btn co-btn-sm"
+                        type="button"
+                        style={{ background: '#10b981', color: 'white', border: 'none' }}
+                        onClick={() => setDecisionModal({ type: 'approve', applicantId: n.meta.application_id })}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        className="co-btn ghost co-btn-sm"
+                        type="button"
+                        style={{ color: '#ef4444' }}
+                        onClick={() => setDecisionModal({ type: 'reject', applicantId: n.meta.application_id, reason: '' })}
+                      >
+                        Reject
+                      </button>
+                    </>
+                  )}
                 {!n.read_at && (
                   <button className="co-btn ghost co-btn-sm" type="button" onClick={() => markNotificationRead(n.id)}>
                     Mark read
                   </button>
                 )}
+                </span>
               </li>
             ))}
           </ul>
+        </div>
+      )}
+    </div>
+  );
+
+  const pendingRequests = useMemo(
+    () => (applicants || []).filter((a) => String(a.status || '').toLowerCase() === 'pending'),
+    [applicants],
+  );
+
+  const requestNotifs = useMemo(
+    () => (notifications || []).filter((n) => n?.type === 'internship_application' && n?.meta?.application_id),
+    [notifications],
+  );
+
+  const renderRequests = () => (
+    <div className="co-card">
+      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+        <div>
+          <h3 style={{ margin: 0 }}>📥 Internship Requests</h3>
+          <div className="co-muted" style={{ marginTop: 6 }}>
+            Student applications waiting for your decision.
+          </div>
+        </div>
+        <button className="co-btn ghost co-btn-sm" type="button" onClick={() => loadCore()}>
+          Refresh
+        </button>
+      </div>
+
+      {pendingRequests.length === 0 ? (
+        <div style={{ padding: 18 }} className="co-muted">
+          No pending requests right now.
+          {requestNotifs.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <div className="co-muted" style={{ marginBottom: 8 }}>
+                You have {requestNotifs.length} application notification(s). Click one below to open it.
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {requestNotifs.slice(0, 6).map((n) => (
+                  <button
+                    key={n.id}
+                    type="button"
+                    className="co-btn ghost co-btn-sm"
+                    onClick={() => openApplicant(n.meta.application_id)}
+                  >
+                    Open request #{n.meta.application_id}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="co-table-wrap" style={{ marginTop: 12 }}>
+          <table className="co-table">
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Internship</th>
+                <th>Applied</th>
+                <th>Stage</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingRequests.map((a) => (
+                <tr key={a.id}>
+                  <td>
+                    <strong>
+                      {a.first_name || 'Student'} {a.last_name || ''}
+                    </strong>
+                    <div className="co-muted" style={{ fontSize: '0.8rem' }}>
+                      {a.department || ''}
+                    </div>
+                  </td>
+                  <td>{a.internship_title || '—'}</td>
+                  <td>{a.applied_date || '—'}</td>
+                  <td>{a.pipeline_stage || 'applied'}</td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <button className="co-btn ghost co-btn-sm" type="button" onClick={() => openApplicant(a.id)}>
+                        Open
+                      </button>
+                      <button
+                        className="co-btn co-btn-sm"
+                        type="button"
+                        style={{ background: '#10b981', color: 'white', border: 'none' }}
+                        onClick={() => setDecisionModal({ type: 'approve', applicantId: a.id })}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        className="co-btn ghost co-btn-sm"
+                        type="button"
+                        style={{ color: '#ef4444' }}
+                        onClick={() => setDecisionModal({ type: 'reject', applicantId: a.id, reason: '' })}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
@@ -399,14 +771,14 @@ const CompanyDashboard = () => {
       {postStep===3&&(<div className="co-form-grid"><label>Requirements<textarea value={postDraft.requirements} onChange={(e)=>setPostDraft((d)=>({...d,requirements:e.target.value}))} placeholder="e.g. Currently enrolled in CS program, CGPA 3.0+"/></label><label>Responsibilities<textarea value={postDraft.responsibilities} onChange={(e)=>setPostDraft((d)=>({...d,responsibilities:e.target.value}))}/></label><label>Required skills (comma separated)<input value={postDraft.required_skills} onChange={(e)=>setPostDraft((d)=>({...d,required_skills:e.target.value}))} placeholder="e.g. React, Node.js, MongoDB"/></label></div>)}
       {postStep===4&&(<div className="co-form-grid"><label>Stipend (optional)<input value={postDraft.stipend} onChange={(e)=>setPostDraft((d)=>({...d,stipend:e.target.value}))} placeholder="e.g. 8000"/></label></div>)}
       {postStep===5&&(<div><p className="co-muted">📊 Evaluation Criteria (Default IMS Rubric):</p><ul className="co-muted"><li>Technical Skills - 30%</li><li>Communication - 20%</li><li>Deliverables - 25%</li><li>Attendance & Punctuality - 15%</li><li>Teamwork - 10%</li></ul></div>)}
-      {postStep===6&&(<div><p className="co-muted">🤖 AI Final Review: Check completeness, inclusivity, and predicted applicant volume.</p><button className="co-btn secondary co-btn-sm" onClick={()=>aiCompanyAPI.optimizePosting({}).then((r)=>showToast(r.data?.keywords?.join(', ')||'Posting optimized!'))}>🔍 Run AI Optimizer</button></div>)}
+      {postStep===6&&(<div><p className="co-muted">🤖 AI Final Review: Check completeness, inclusivity, and predicted applicant volume.</p><button className="co-btn secondary co-btn-sm" onClick={optimizePosting}>🔍 Run AI Optimizer</button></div>)}
       <div style={{marginTop:20,display:'flex',gap:10,flexWrap:'wrap',alignItems:'center',paddingTop:16,borderTop:'1px solid #e5e7eb'}}>
         <button className="co-btn secondary co-btn-sm" onClick={()=>setPostStep((s)=>Math.max(1,s-1))}>← Back</button>
         <button className="co-btn secondary co-btn-sm" onClick={()=>setPostStep((s)=>Math.min(6,s+1))}>Next →</button>
         <div style={{flex:1}}/>
         <button className="co-btn secondary co-btn-sm" disabled={busy==='post'} onClick={submitPost}>💾 Save Draft</button>
         <button disabled={busy==='submit'} onClick={submitForApproval} style={{background:'linear-gradient(135deg,#667eea,#764ba2)',color:'white',border:'none',fontWeight:700,padding:'10px 24px',borderRadius:'10px',cursor:busy==='submit'?'wait':'pointer',fontSize:'0.9rem',boxShadow:'0 4px 15px rgba(102,126,234,0.3)',transition:'all 0.3s ease'}}>{busy==='submit'?'⏳ Submitting...':'🚀 Submit for Approval'}</button>
-        <button className="co-btn ghost co-btn-sm" onClick={()=>aiCompanyAPI.generateJobDescription({role_type:postDraft.title}).then((r)=>setPostDraft((d)=>({...d,description:r.data?.description||d.description})))}>🤖 AI Generate Description</button>
+        <button className="co-btn ghost co-btn-sm" onClick={generateDescription}>🤖 AI Generate Description</button>
       </div>
     </div>
   );
@@ -431,9 +803,9 @@ const CompanyDashboard = () => {
                   <td>
                     <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                       {row.submission_status !== 'approved' && (
-                        <button className="co-btn co-btn-sm" style={{background:'linear-gradient(135deg,#667eea,#764ba2)',color:'white',border:'none'}} onClick={()=>companyAPI.submitInternshipForApproval(row.id).then(()=>{showToast('Submitted for approval! 🚀');loadCore();})}>Submit</button>
+                        <button className="co-btn co-btn-sm" style={{background:'linear-gradient(135deg,#667eea,#764ba2)',color:'white',border:'none'}} onClick={()=>submitExistingInternshipForApproval(row.id)}>Submit</button>
                       )}
-                      <button className="co-btn ghost co-btn-sm" onClick={()=>companyAPI.deleteInternship(row.id).then(()=>loadCore())}>🗑️</button>
+                      <button className="co-btn ghost co-btn-sm" onClick={()=>deleteInternship(row.id)}>🗑️</button>
                     </div>
                   </td>
                 </tr>
@@ -523,96 +895,256 @@ const CompanyDashboard = () => {
         </div>
       )}
 
-      {selectedApplicant && (
-        <div className="co-modal-overlay" role="dialog" onClick={()=>setSelectedApplicant(null)}>
-          <div className="co-modal" onClick={(e)=>e.stopPropagation()}>
-            <h3>{selectedApplicant.application?.student?.first_name||'Student'} {selectedApplicant.application?.student?.last_name||''}</h3>
-            <p className="co-muted">{selectedApplicant.ai_insights?.summary||'No AI insights available.'}</p>
-            <ul><li>Skills match: {selectedApplicant.ai_insights?.skills_match||'—'}%</li><li>Culture fit: {selectedApplicant.ai_insights?.culture_fit||'—'}%</li></ul>
-            <h4>Interview questions</h4>
-            <ul>{(selectedApplicant.ai_insights?.interview_questions||[]).map((q,i)=>(<li key={i}>{q}</li>))}</ul>
-            <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:12}}>
-              <button className="co-btn co-btn-sm" onClick={()=>setDecisionModal({ type: 'approve', applicantId: selectedApplicant.application?.id||selectedApplicant.id })}>✅ Approve</button>
-              <button className="co-btn ghost co-btn-sm" style={{color:'#ef4444'}} onClick={()=>setDecisionModal({ type: 'reject', applicantId: selectedApplicant.application?.id||selectedApplicant.id, reason: '' })}>❌ Reject</button>
-              <button className="co-btn ghost co-btn-sm" onClick={()=>setSelectedApplicant(null)}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {decisionModal && (
-        <div className="co-modal-overlay" role="dialog" onClick={() => setDecisionModal(null)}>
-          <div className="co-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>{decisionModal.type === 'approve' ? 'Approve applicant' : 'Reject applicant'}</h3>
-            <p className="co-muted">
-              {decisionModal.type === 'approve'
-                ? 'Approving will assign this student as an intern.'
-                : 'Optionally provide a reason for rejection.'}
-            </p>
-            {decisionModal.type === 'reject' && (
-              <textarea
-                rows={4}
-                placeholder="Reason (optional)"
-                value={decisionModal.reason || ''}
-                onChange={(e) => setDecisionModal((p) => ({ ...p, reason: e.target.value }))}
-              />
-            )}
-            <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:12}}>
-              <button
-                className="co-btn co-btn-sm"
-                style={decisionModal.type === 'approve' ? { background:'#10b981', color:'white', border:'none' } : undefined}
-                onClick={async () => {
-                  const id = decisionModal.applicantId;
-                  try {
-                    if (decisionModal.type === 'approve') {
-                      await companyAPI.approveApplicant(id);
-                      showToast('Approved! Student moved to Current Interns. 🎉');
-                      setActive('interns');
-                    } else {
-                      await companyAPI.rejectApplicant(id, decisionModal.reason);
-                      showToast('Rejected.');
-                    }
-                    setDecisionModal(null);
-                    setSelectedApplicant(null);
-                    await loadCore();
-                  } catch {
-                    showToast(`Failed to ${decisionModal.type}.`, 'error');
-                  }
-                }}
-              >
-                {decisionModal.type === 'approve' ? 'Approve' : 'Reject'}
-              </button>
-              <button className="co-btn ghost co-btn-sm" onClick={() => setDecisionModal(null)}>Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 
   const renderFind = () => (
     <div className="co-grid">
       <div className="co-card"><h3>🔍 Find Candidates</h3><input placeholder="Search skills, names, interests..." value={findQuery} onChange={(e)=>setFindQuery(e.target.value)} style={{width:'100%',maxWidth:420,padding:10,borderRadius:10,border:'1px solid #e5e7eb'}}/><div style={{marginTop:12}}><button className="co-btn co-btn-sm" disabled={busy==='find'} onClick={runFindSearch}>AI smart search</button></div></div>
-      <div className="co-card"><h4>Results</h4><ul>{findResults.map((s)=>(<li key={s.id}>{s.name} · {s.department} · match {s.ai_match}<button className="co-btn ghost co-btn-sm" onClick={()=>companyAPI.addTalentPool({student_id:s.id}).then(()=>showToast('Saved to talent pool'))}>Save</button></li>))}</ul></div>
+      <div className="co-card"><h4>Results</h4><ul>{findResults.map((s)=>(<li key={s.id}>{s.name} · {s.department} · match {s.ai_match}<button className="co-btn ghost co-btn-sm" onClick={()=>saveToTalentPool(s.id)}>Save</button></li>))}</ul></div>
     </div>
   );
 
   const renderInterns = () => (
-    <div className="co-card co-table-wrap">
-      <h3>👥 Current Interns</h3>
-      <table className="co-table">
-        <thead><tr><th>Intern</th><th>Program</th><th>Status</th><th/></tr></thead>
-        <tbody>
-          {interns.map((row)=>(
-            <tr key={row.application_id}>
-              <td>{row.student?.first_name} {row.student?.last_name}</td>
-              <td>{row.internship_title}</td>
-              <td>{row.status_label}</td>
-              <td><button className="co-btn ghost co-btn-sm" onClick={()=>aiCompanyAPI.internPerformancePredict({}).then((r)=>showToast(`Risk ${r.data?.risk_score}`))}>AI monitor</button></td>
+    <div className="co-card">
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div>
+          <h3 style={{ margin: 0 }}>👥 Current Interns</h3>
+          <div className="co-muted" style={{ marginTop: 6 }}>
+            Manage active interns: message, schedule, evaluate, or remove from the program.
+          </div>
+        </div>
+        <button className="co-btn ghost co-btn-sm" type="button" onClick={() => loadCore()}>
+          Refresh
+        </button>
+      </div>
+
+      <div className="co-form-grid" style={{ marginTop: 12 }}>
+        <label>
+          Search intern
+          <input
+            value={internSearch}
+            onChange={(e) => setInternSearch(e.target.value)}
+            placeholder="Search by name or program…"
+          />
+        </label>
+      </div>
+
+      <div className="co-table-wrap" style={{ marginTop: 12 }}>
+        <table className="co-table">
+          <thead>
+            <tr>
+              <th>Intern</th>
+              <th>Program</th>
+              <th>Dates</th>
+              <th>Status</th>
+              <th style={{ width: 420 }}>Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {(interns || [])
+              .filter((row) => {
+                const name = `${row.student?.first_name || ''} ${row.student?.last_name || ''}`.toLowerCase();
+                const program = String(row.internship_title || '').toLowerCase();
+                const q = String(internSearch || '').trim().toLowerCase();
+                if (!q) return true;
+                return name.includes(q) || program.includes(q);
+              })
+              .map((row) => (
+                <tr key={row.application_id}>
+                  <td>
+                    <strong>
+                      {row.student?.first_name} {row.student?.last_name}
+                    </strong>
+                    <div className="co-muted" style={{ fontSize: '0.8rem' }}>
+                      {row.student?.department?.name || ''}
+                    </div>
+                  </td>
+                  <td>{row.internship_title}</td>
+                  <td className="co-muted" style={{ fontSize: '0.85rem' }}>
+                    {row.start_date || '—'} → {row.end_date || '—'}
+                  </td>
+                  <td>
+                    <span className={`co-badge ${row.status_label === 'active' ? 'active' : 'draft'}`}>{row.status_label}</span>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      <button
+                        className="co-btn ghost co-btn-sm"
+                        type="button"
+                        onClick={() => {
+                          setMsgDraft((d) => ({ ...d, student_id: String(row.student?.id || ''), body: d.body || '' }));
+                          setActive('messages');
+                        }}
+                      >
+                        Message
+                      </button>
+                      <button
+                        className="co-btn ghost co-btn-sm"
+                        type="button"
+                        onClick={() => {
+                          const dt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+                          const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                          setScheduleDraft((d) => ({
+                            ...d,
+                            application_id: String(row.application_id),
+                            scheduled_at: d.scheduled_at || local,
+                            notes: d.notes || `Interview / check-in with ${row.student?.first_name || 'intern'}`,
+                          }));
+                          setActive('schedule');
+                        }}
+                      >
+                        Request interview
+                      </button>
+                      <button
+                        className="co-btn ghost co-btn-sm"
+                        type="button"
+                        onClick={() => {
+                          setEvalDraft((d) => ({
+                            ...d,
+                            student_id: String(row.student?.id || ''),
+                            application_ref: String(row.application_id),
+                          }));
+                          setActive('evaluations');
+                        }}
+                      >
+                        Evaluate
+                      </button>
+                      <button
+                        className="co-btn ghost co-btn-sm"
+                        type="button"
+                        onClick={runInternRiskMonitor}
+                      >
+                        AI monitor
+                      </button>
+                      <button
+                        className="co-btn ghost co-btn-sm"
+                        type="button"
+                        onClick={() => {
+                          setInternActionNote('');
+                          setInternAction({ type: 'complete', row });
+                        }}
+                      >
+                        Complete
+                      </button>
+                      <button
+                        className="co-btn ghost co-btn-sm"
+                        type="button"
+                        style={{ color: '#ef4444' }}
+                        onClick={() => {
+                          setInternActionNote('');
+                          setInternAction({ type: 'terminate', row });
+                        }}
+                      >
+                        Terminate
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+        {(!interns || interns.length === 0) && (
+          <div className="co-muted" style={{ padding: 18 }}>
+            No interns yet. Approve a student request to assign them as an intern.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderInternHistory = () => (
+    <div className="co-card">
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div>
+          <h3 style={{ margin: 0 }}>🗂️ Intern History</h3>
+          <div className="co-muted" style={{ marginTop: 6 }}>
+            Completed and terminated placements for reporting and follow-up.
+          </div>
+        </div>
+        <button className="co-btn ghost co-btn-sm" type="button" onClick={() => loadCore()}>
+          Refresh
+        </button>
+      </div>
+
+      <div className="co-form-grid" style={{ marginTop: 12 }}>
+        <label>
+          Search history
+          <input
+            value={historySearch}
+            onChange={(e) => setHistorySearch(e.target.value)}
+            placeholder="Search by student, program, or reason…"
+          />
+        </label>
+        <label>
+          Status
+          <select value={historyFilter} onChange={(e) => setHistoryFilter(e.target.value)}>
+            <option value="all">All</option>
+            <option value="completed">Completed</option>
+            <option value="terminated">Terminated</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="co-table-wrap" style={{ marginTop: 12 }}>
+        <table className="co-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Program</th>
+              <th>Status</th>
+              <th>Started</th>
+              <th>Ended</th>
+              <th>Note / Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(internHistory || [])
+              .filter((row) => {
+                const q = String(historySearch || '').trim().toLowerCase();
+                const status = String(row.intern_status || '').toLowerCase();
+                if (historyFilter !== 'all' && status !== historyFilter) return false;
+                if (!q) return true;
+                const text = [
+                  row.student?.first_name,
+                  row.student?.last_name,
+                  row.internship_title,
+                  row.intern_end_reason,
+                ]
+                  .filter(Boolean)
+                  .join(' ')
+                  .toLowerCase();
+                return text.includes(q);
+              })
+              .map((row) => (
+                <tr key={row.application_id}>
+                  <td>
+                    <strong>
+                      {row.student?.first_name} {row.student?.last_name}
+                    </strong>
+                    <div className="co-muted" style={{ fontSize: '0.8rem' }}>
+                      {row.student?.department?.name || ''}
+                    </div>
+                  </td>
+                  <td>{row.internship_title || '—'}</td>
+                  <td>
+                    <span className={`co-badge ${row.intern_status === 'completed' ? 'active' : 'danger'}`}>
+                      {row.intern_status || '—'}
+                    </span>
+                  </td>
+                  <td>{row.intern_started_at ? new Date(row.intern_started_at).toLocaleDateString() : (row.start_date || '—')}</td>
+                  <td>{row.intern_ended_at ? new Date(row.intern_ended_at).toLocaleDateString() : (row.end_date || '—')}</td>
+                  <td className="co-muted">{row.intern_end_reason || '—'}</td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+        {(!internHistory || internHistory.length === 0) && (
+          <div className="co-muted" style={{ padding: 18 }}>
+            No intern history records yet.
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -624,8 +1156,8 @@ const CompanyDashboard = () => {
       <div className="co-form-grid">{['technical_skills','communication_skills','problem_solving','teamwork','time_management'].map((k)=>(<label key={k}>{k.replace(/_/g,' ')}<input type="number" value={evalDraft[k]} onChange={(e)=>setEvalDraft((d)=>({...d,[k]:Number(e.target.value)}))}/></label>))}</div>
       <label>Narrative strengths<textarea value={evalDraft.strengths} onChange={(e)=>setEvalDraft((d)=>({...d,strengths:e.target.value}))}/></label>
       <div style={{marginTop:12,display:'flex',gap:8}}>
-        <button className="co-btn co-btn-sm" onClick={()=>companyAPI.evaluateIntern(Number(evalDraft.student_id),{type:evalDraft.type,technical_skills:evalDraft.technical_skills,communication_skills:evalDraft.communication_skills,problem_solving:evalDraft.problem_solving,teamwork:evalDraft.teamwork,time_management:evalDraft.time_management,strengths:evalDraft.strengths,weaknesses:evalDraft.weaknesses,recommendations:evalDraft.recommendations,evaluation_date:evalDraft.evaluation_date}).then(()=>showToast('Evaluation saved'))}>Submit evaluation</button>
-        <button className="co-btn ghost co-btn-sm" onClick={()=>aiCompanyAPI.generateEvaluation({}).then((r)=>setEvalDraft((d)=>({...d,strengths:r.data?.draft||d.strengths})))}>AI draft</button>
+        <button className="co-btn co-btn-sm" onClick={submitEvaluation}>Submit evaluation</button>
+        <button className="co-btn ghost co-btn-sm" onClick={aiDraftEvaluation}>AI draft</button>
       </div>
     </div>
   );
@@ -635,7 +1167,7 @@ const CompanyDashboard = () => {
       <h3>💬 Messages</h3>
       <div className="co-form-grid"><label>Student user ID<input value={msgDraft.student_id} onChange={(e)=>setMsgDraft((d)=>({...d,student_id:e.target.value}))}/></label></div>
       <textarea rows={4} value={msgDraft.body} onChange={(e)=>setMsgDraft((d)=>({...d,body:e.target.value}))} placeholder="Type your message..."/>
-      <div style={{marginTop:8,display:'flex',gap:8}}><button className="co-btn co-btn-sm" onClick={()=>companyAPI.sendMessage({student_id:Number(msgDraft.student_id),body:msgDraft.body}).then(()=>showToast('Sent'))}>Send</button><button className="co-btn ghost co-btn-sm" onClick={()=>aiCompanyAPI.suggestReply({}).then((r)=>setMsgDraft((d)=>({...d,body:r.data?.suggested_reply||d.body})))}>AI suggest reply</button></div>
+      <div style={{marginTop:8,display:'flex',gap:8}}><button className="co-btn co-btn-sm" onClick={sendMessageToStudent}>Send</button><button className="co-btn ghost co-btn-sm" onClick={aiSuggestReply}>AI suggest reply</button></div>
       <h4>Inbox</h4><ul>{messages.slice(0,20).map((m)=>(<li key={m.id}>{m.subject}: {m.body?.slice(0,80)}</li>))}</ul>
     </div>
   );
@@ -645,21 +1177,21 @@ const CompanyDashboard = () => {
       <h3>📅 Schedule</h3>
       <div className="co-form-grid"><label>Application ID<input value={scheduleDraft.application_id} onChange={(e)=>setScheduleDraft((d)=>({...d,application_id:e.target.value}))}/></label><label>When<input type="datetime-local" value={scheduleDraft.scheduled_at} onChange={(e)=>setScheduleDraft((d)=>({...d,scheduled_at:e.target.value}))}/></label></div>
       <textarea placeholder="Notes" value={scheduleDraft.notes} onChange={(e)=>setScheduleDraft((d)=>({...d,notes:e.target.value}))}/>
-      <button className="co-btn co-btn-sm" style={{marginTop:10}} onClick={()=>companyAPI.createSchedule({application_id:Number(scheduleDraft.application_id),scheduled_at:scheduleDraft.scheduled_at,notes:scheduleDraft.notes}).then(()=>showToast('Scheduled'))}>Save interview</button>
+      <button className="co-btn co-btn-sm" style={{marginTop:10}} onClick={saveInterview}>Save interview</button>
     </div>
   );
 
   const renderAnalytics = () => (
-    <div className="co-grid"><div className="co-card"><h3>📈 Analytics</h3><pre style={{background:'#f9fafb',padding:12,borderRadius:8}}>{JSON.stringify(analytics,null,2)}</pre><button className="co-btn co-btn-sm" onClick={()=>companyAPI.generateReport({type:'recruitment'}).then(()=>showToast('Report queued'))}>Generate report</button></div></div>
+    <div className="co-grid"><div className="co-card"><h3>📈 Analytics</h3><pre style={{background:'#f9fafb',padding:12,borderRadius:8}}>{JSON.stringify(analytics,null,2)}</pre><button className="co-btn co-btn-sm" onClick={queueRecruitmentReport}>Generate report</button></div></div>
   );
 
   const renderProfile = () => (
     <div className="co-card">
       <h3>🏢 Company Profile</h3>
       <p className="co-muted">Completeness: {profile?.profile_completeness??'—'}%</p>
-      <div className="co-form-grid"><label>Name<input defaultValue={profile?.company?.name} id="co-name"/></label><label>Industry<input defaultValue={profile?.company?.industry} id="co-industry"/></label></div>
-      <label>Description<textarea defaultValue={profile?.company?.description} id="co-desc" rows={5}/></label>
-      <button className="co-btn co-btn-sm" onClick={()=>{const name=document.getElementById('co-name')?.value;const industry=document.getElementById('co-industry')?.value;const description=document.getElementById('co-desc')?.value;companyAPI.updateProfile({name,industry,description}).then(()=>showToast('Profile saved'));}}>Save profile</button>
+      <div className="co-form-grid"><label>Name<input value={profileDraft.name} onChange={(e)=>setProfileDraft((d)=>({ ...d, name: e.target.value }))}/></label><label>Industry<input value={profileDraft.industry} onChange={(e)=>setProfileDraft((d)=>({ ...d, industry: e.target.value }))}/></label></div>
+      <label>Description<textarea value={profileDraft.description} onChange={(e)=>setProfileDraft((d)=>({ ...d, description: e.target.value }))} rows={5}/></label>
+      <button className="co-btn co-btn-sm" onClick={saveProfile}>Save profile</button>
     </div>
   );
 
@@ -668,7 +1200,7 @@ const CompanyDashboard = () => {
       <h3>🤖 AI Recruitment Co-Pilot</h3>
       <div className="co-chat">{aiChat.map((m,i)=>(<div key={i} className={`co-chat-bubble ${m.role==='user'?'user':'ai'}`}>{m.text}</div>))}</div>
       <div className="co-chat-input"><input value={aiInput} onChange={(e)=>setAiInput(e.target.value)} placeholder="Ask about hiring, interviews, retention..." onKeyDown={(e)=>e.key==='Enter'&&sendAi()}/><button className="co-btn co-btn-sm" onClick={sendAi}>Send</button></div>
-      <button className="co-btn ghost co-btn-sm" onClick={()=>aiCompanyAPI.marketInsights().then((r)=>showToast(r.data?.stipend_benchmark?.slice(0,80)))}>Market insights</button>
+      <button className="co-btn ghost co-btn-sm" onClick={showMarketInsights}>Market insights</button>
     </div>
   );
 
@@ -676,8 +1208,8 @@ const CompanyDashboard = () => {
     <div className="co-card">
       <h3>⚙️ Settings</h3>
       <div className="co-form-grid">
-        <label>AI level<select value={settings?.ai_assistance_level||'balanced'} onChange={(e)=>companyAPI.updateSettings({ai_assistance_level:e.target.value}).then((r)=>setSettings(r.data?.settings??settings))}><option value="minimal">Minimal</option><option value="balanced">Balanced</option><option value="maximum">Maximum</option></select></label>
-        <label>AI communication style<select value={settings?.ai_communication_style||'balanced'} onChange={(e)=>companyAPI.updateSettings({ai_communication_style:e.target.value}).then((r)=>setSettings(r.data?.settings??settings))}><option value="formal">Formal</option><option value="balanced">Balanced</option><option value="friendly">Friendly</option></select></label>
+        <label>AI level<select value={settings?.ai_assistance_level||'balanced'} onChange={(e)=>updateCompanySetting('ai_assistance_level', e.target.value)}><option value="minimal">Minimal</option><option value="balanced">Balanced</option><option value="maximum">Maximum</option></select></label>
+        <label>AI communication style<select value={settings?.ai_communication_style||'balanced'} onChange={(e)=>updateCompanySetting('ai_communication_style', e.target.value)}><option value="formal">Formal</option><option value="balanced">Balanced</option><option value="friendly">Friendly</option></select></label>
       </div>
       <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #e5e7eb' }}>
         <h4 style={{ margin: 0 }}>Change password</h4>
@@ -706,7 +1238,9 @@ const CompanyDashboard = () => {
 
   const content = {
     overview: renderOverview(), notifications: renderNotifications(), post: renderPost(), manage: renderManage(),
+    requests: renderRequests(),
     applicants: renderApplicants(), find: renderFind(), interns: renderInterns(),
+    'intern-history': renderInternHistory(),
     evaluations: renderEvaluations(), messages: renderMessages(), schedule: renderSchedule(),
     analytics: renderAnalytics(), profile: renderProfile(), ai: renderAI(), settings: renderSettings(),
   };
@@ -732,7 +1266,11 @@ const CompanyDashboard = () => {
       <div className="co-shell">
         <header className="co-topbar">
           <button className="co-burger" onClick={()=>setSidebarOpen((o)=>!o)}>☰</button>
-          <h1 className="co-title">{NAV.find((x)=>x.id===active)?.label}</h1>
+          <div style={{ flex: 1 }}>
+            <h1 className="co-title">{NAV.find((x)=>x.id===active)?.label}</h1>
+            <div className="co-muted" style={{ fontSize: '0.82rem' }}>{SECTION_SUBTITLE[active] || 'Company workspace'}</div>
+          </div>
+          <button className="co-btn ghost co-btn-sm" onClick={loadCore}>Refresh</button>
         </header>
         <main className="co-main">
           <div style={{ marginBottom: 12 }}>
@@ -748,6 +1286,129 @@ const CompanyDashboard = () => {
         </main>
       </div>
       {toast&&<div className={`co-toast ${toast.type}`}>{toast.message}</div>}
+
+      {selectedApplicant && (
+        <div className="co-modal-overlay" role="dialog" onClick={() => setSelectedApplicant(null)}>
+          <div className="co-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>
+              {selectedApplicant.application?.student?.first_name || selectedApplicant.application?.student?.full_name || 'Student'}{' '}
+              {selectedApplicant.application?.student?.last_name || ''}
+            </h3>
+            <p className="co-muted">{selectedApplicant.ai_insights?.summary || 'No AI insights available.'}</p>
+            <ul>
+              <li>Skills match: {selectedApplicant.ai_insights?.skills_match || '—'}%</li>
+              <li>Culture fit: {selectedApplicant.ai_insights?.culture_fit || '—'}%</li>
+            </ul>
+            <h4>Interview questions</h4>
+            <ul>{(selectedApplicant.ai_insights?.interview_questions || []).map((q, i) => (<li key={i}>{q}</li>))}</ul>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+              <button
+                className="co-btn co-btn-sm"
+                onClick={() =>
+                  setDecisionModal({ type: 'approve', applicantId: selectedApplicant.application?.id || selectedApplicant.id })
+                }
+              >
+                ✅ Approve
+              </button>
+              <button
+                className="co-btn ghost co-btn-sm"
+                style={{ color: '#ef4444' }}
+                onClick={() =>
+                  setDecisionModal({ type: 'reject', applicantId: selectedApplicant.application?.id || selectedApplicant.id, reason: '' })
+                }
+              >
+                ❌ Reject
+              </button>
+              <button className="co-btn ghost co-btn-sm" onClick={() => setSelectedApplicant(null)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {decisionModal && (
+        <div className="co-modal-overlay" role="dialog" onClick={() => setDecisionModal(null)}>
+          <div className="co-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>{decisionModal.type === 'approve' ? 'Approve applicant' : 'Reject applicant'}</h3>
+            <p className="co-muted">
+              {decisionModal.type === 'approve'
+                ? 'Approving will assign this student as an intern.'
+                : 'Optionally provide a reason for rejection.'}
+            </p>
+            {decisionModal.type === 'reject' && (
+              <textarea
+                rows={4}
+                placeholder="Reason (optional)"
+                value={decisionModal.reason || ''}
+                onChange={(e) => setDecisionModal((p) => ({ ...p, reason: e.target.value }))}
+              />
+            )}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+              <button
+                className="co-btn co-btn-sm"
+                style={decisionModal.type === 'approve' ? { background: '#10b981', color: 'white', border: 'none' } : undefined}
+                onClick={() => performDecision(decisionModal)}
+              >
+                {decisionModal.type === 'approve' ? 'Approve' : 'Reject'}
+              </button>
+              <button className="co-btn ghost co-btn-sm" onClick={() => setDecisionModal(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {internAction && (
+        <div className="co-modal-overlay" role="dialog" onClick={() => setInternAction(null)}>
+          <div className="co-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>{internAction.type === 'complete' ? 'Complete internship' : 'Terminate internship'}</h3>
+            <p className="co-muted">
+              {internAction.type === 'complete'
+                ? 'Mark this internship placement as completed. The student will move out of Current Interns.'
+                : 'Terminate this internship placement. The student will move out of Current Interns.'}
+            </p>
+            <textarea
+              rows={4}
+              placeholder={internAction.type === 'complete' ? 'Completion note (optional)' : 'Termination reason (optional)'}
+              value={internActionNote}
+              onChange={(e) => setInternActionNote(e.target.value)}
+            />
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+              <button
+                className="co-btn co-btn-sm"
+                style={
+                  internAction.type === 'terminate'
+                    ? { background: '#ef4444', color: 'white', border: 'none' }
+                    : { background: '#10b981', color: 'white', border: 'none' }
+                }
+                onClick={async () => {
+                  try {
+                    const appId = internAction?.row?.application_id;
+                    if (internAction.type === 'complete') {
+                      await companyAPI.completeIntern(appId, internActionNote);
+                      showToast('Marked as completed.');
+                    } else {
+                      await companyAPI.terminateIntern(appId, internActionNote);
+                      showToast('Terminated.');
+                    }
+                    setInternAction(null);
+                    await loadCore();
+                  } catch (e) {
+                    showToast(e?.response?.data?.error || 'Update failed.', 'error');
+                  }
+                }}
+              >
+                {internAction.type === 'complete' ? 'Complete' : 'Terminate'}
+              </button>
+              <button className="co-btn ghost co-btn-sm" onClick={() => setInternAction(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

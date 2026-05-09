@@ -109,18 +109,59 @@ class CompanyController extends Controller
         $user = $this->companyUser($request);
         $company = $this->companyModel($user);
         $app = $this->applicationsQuery((int) $company->id)->findOrFail($id);
+        $app->loadMissing(['internship', 'student']);
+
+        $internship = $app->internship;
+        if (!$internship) {
+            return response()->json(['error' => 'Internship not found for this application.'], 422);
+        }
+
+        // Prevent over-approving beyond the internship capacity.
+        $capacity = max(1, (int) ($internship->max_applicants ?? 1));
+        $approvedCount = Application::query()
+            ->where('internship_id', $internship->id)
+            ->where('status', 'approved')
+            ->count();
+        if ($approvedCount >= $capacity) {
+            return response()->json([
+                'error' => 'This internship has already reached its capacity.',
+                'code' => 'capacity_reached',
+            ], 422);
+        }
 
         $app->update([
             'status' => 'approved',
             'approved_date' => now(),
+            'intern_status' => 'active',
+            'intern_started_at' => now(),
+            'intern_ended_at' => null,
+            'intern_end_reason' => null,
         ]);
 
-        $internship = $app->internship;
         // NOTE: `current_applicants` is incremented on application submission.
         // Approving an application should not increment it again.
 
-        // Notify student
+        // If capacity is now reached, close the internship posting.
+        if (($approvedCount + 1) >= $capacity) {
+            $internship->update(['status' => 'closed']);
+        }
+
+        // If a student gets placed, withdraw all of their other pending applications
+        // (so the workflow is consistent: one student -> one placement).
         $student = $app->student;
+        if ($student) {
+            $otherPending = Application::query()
+                ->with('internship')
+                ->where('student_id', $student->id)
+                ->where('status', 'pending')
+                ->where('id', '!=', $app->id)
+                ->get();
+            foreach ($otherPending as $other) {
+                $other->withdraw();
+            }
+        }
+
+        // Notify student
         if ($student) {
             Notification::create([
                 'user_id' => $student->id,
@@ -160,6 +201,81 @@ class CompanyController extends Controller
             'message' => 'Application approved successfully! Student is now an intern.',
             'application' => $app->fresh(['student', 'internship.company']),
         ]);
+    }
+
+    public function terminateIntern(Request $request, int $applicationId)
+    {
+        $user = $this->companyUser($request);
+        $company = $this->companyModel($user);
+
+        $validated = Validator::make($request->all(), [
+            'reason' => 'nullable|string|max:5000',
+        ])->validated();
+
+        $app = $this->applicationsQuery((int) $company->id)->findOrFail($applicationId);
+        abort_unless($app->status === 'approved', 422, 'Only approved placements can be terminated.');
+
+        $app->update([
+            'intern_status' => 'terminated',
+            'intern_ended_at' => now(),
+            'intern_end_reason' => $validated['reason'] ?? null,
+        ]);
+
+        // Notify student
+        $student = $app->student;
+        $internship = $app->internship;
+        if ($student && $internship) {
+            Notification::create([
+                'user_id' => $student->id,
+                'type' => 'internship_terminated',
+                'title' => 'Internship placement ended',
+                'message' => "Your internship placement for \"{$internship->title}\" at {$company->name} has been terminated.",
+                'meta' => [
+                    'application_id' => $app->id,
+                    'internship_id' => $internship->id,
+                    'company_id' => $company->id,
+                ],
+            ]);
+        }
+
+        return response()->json(['message' => 'Intern terminated.', 'application' => $app->fresh()]);
+    }
+
+    public function completeIntern(Request $request, int $applicationId)
+    {
+        $user = $this->companyUser($request);
+        $company = $this->companyModel($user);
+
+        $validated = Validator::make($request->all(), [
+            'note' => 'nullable|string|max:5000',
+        ])->validated();
+
+        $app = $this->applicationsQuery((int) $company->id)->findOrFail($applicationId);
+        abort_unless($app->status === 'approved', 422, 'Only approved placements can be completed.');
+
+        $app->update([
+            'intern_status' => 'completed',
+            'intern_ended_at' => now(),
+            'intern_end_reason' => $validated['note'] ?? null,
+        ]);
+
+        $student = $app->student;
+        $internship = $app->internship;
+        if ($student && $internship) {
+            Notification::create([
+                'user_id' => $student->id,
+                'type' => 'internship_completed',
+                'title' => 'Internship completed',
+                'message' => "Congratulations! Your internship for \"{$internship->title}\" at {$company->name} has been marked as completed.",
+                'meta' => [
+                    'application_id' => $app->id,
+                    'internship_id' => $internship->id,
+                    'company_id' => $company->id,
+                ],
+            ]);
+        }
+
+        return response()->json(['message' => 'Intern completed.', 'application' => $app->fresh()]);
     }
 
     // ============================================
@@ -736,6 +852,11 @@ class CompanyController extends Controller
             ->with(['student.department', 'internship'])
             ->whereHas('internship', fn ($q) => $q->where('company_id', $cid))
             ->where('status', 'approved')
+            ->where(function ($q) {
+                $q->whereNull('intern_status')
+                    ->orWhere('intern_status', '')
+                    ->orWhere('intern_status', 'active');
+            })
             ->orderByDesc('approved_date')
             ->paginate($request->integer('per_page', 30));
 
@@ -748,10 +869,46 @@ class CompanyController extends Controller
                 'internship_title' => $internship?->title,
                 'start_date' => optional($internship?->start_date)->toDateString(),
                 'end_date' => optional($internship?->end_date)->toDateString(),
-                'status_label' => now()->between($internship?->start_date ?? now()->subDay(), $internship?->end_date ?? now()->addMonth())
-                    ? 'active'
-                    : 'completed',
+                'intern_status' => $a->intern_status,
+                'status_label' => $a->intern_status
+                    ? $a->intern_status
+                    : (now()->between($internship?->start_date ?? now()->subDay(), $internship?->end_date ?? now()->addMonth())
+                        ? 'active'
+                        : 'completed'),
                 'performance_hint' => 'On track — maintain weekly sync for deliverables.',
+            ];
+        });
+
+        return response()->json($rows);
+    }
+
+    public function internHistory(Request $request)
+    {
+        $user = $this->companyUser($request);
+        $cid = (int) $user->company_id;
+
+        $rows = Application::query()
+            ->with(['student.department', 'internship'])
+            ->whereHas('internship', fn ($q) => $q->where('company_id', $cid))
+            ->where('status', 'approved')
+            ->whereIn('intern_status', ['completed', 'terminated'])
+            ->orderByDesc('intern_ended_at')
+            ->orderByDesc('updated_at')
+            ->paginate($request->integer('per_page', 40));
+
+        $rows->getCollection()->transform(function (Application $a) {
+            $internship = $a->internship;
+
+            return [
+                'application_id' => $a->id,
+                'student' => $a->student,
+                'internship_title' => $internship?->title,
+                'start_date' => optional($internship?->start_date)->toDateString(),
+                'end_date' => optional($internship?->end_date)->toDateString(),
+                'intern_status' => $a->intern_status,
+                'intern_started_at' => optional($a->intern_started_at)->toIso8601String(),
+                'intern_ended_at' => optional($a->intern_ended_at)->toIso8601String(),
+                'intern_end_reason' => $a->intern_end_reason,
             ];
         });
 

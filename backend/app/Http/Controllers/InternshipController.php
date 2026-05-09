@@ -476,6 +476,22 @@ class InternshipController extends Controller
         $internship = Internship::findOrFail($id);
         $student = auth()->user();
 
+        // Students should not start new applications once they are already placed
+        // in an approved internship (active or upcoming).
+        $alreadyPlaced = Application::query()
+            ->where('student_id', $student->id)
+            ->where('status', 'approved')
+            ->whereHas('internship', function ($q) {
+                $q->whereDate('end_date', '>=', now()->toDateString());
+            })
+            ->exists();
+        if ($alreadyPlaced) {
+            return response()->json([
+                'error' => 'You are already assigned to an internship program. You cannot apply to new internships.',
+                'code' => 'already_placed',
+            ], 422);
+        }
+
         if (!$internship->isAvailable()) {
             return response()->json(['error' => 'Internship is not available for application'], 422);
         }

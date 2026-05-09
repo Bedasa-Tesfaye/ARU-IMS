@@ -17,6 +17,10 @@ class Application extends Model
         'rejection_reason',
         'applied_date',
         'approved_date',
+        'intern_status',
+        'intern_started_at',
+        'intern_ended_at',
+        'intern_end_reason',
         'student_id',
         'internship_id',
         'coordinator_id',
@@ -25,6 +29,8 @@ class Application extends Model
     protected $casts = [
         'applied_date' => 'date',
         'approved_date' => 'date',
+        'intern_started_at' => 'datetime',
+        'intern_ended_at' => 'datetime',
     ];
 
     protected static function booted()

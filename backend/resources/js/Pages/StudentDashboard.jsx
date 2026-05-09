@@ -143,6 +143,10 @@ function StatusBadge({ status }) {
   const cls =
     s === 'intern' || s === 'accepted' || s === 'approved'
       ? 'accepted'
+      : s === 'completed'
+        ? 'accepted'
+        : s === 'terminated'
+          ? 'rejected'
       : s === 'offer'
         ? 'accepted'
       : s === 'rejected'
@@ -159,6 +163,10 @@ function StatusBadge({ status }) {
   const text =
     s === 'intern' || s === 'accepted' || s === 'approved'
       ? 'Intern'
+      : s === 'completed'
+        ? 'Completed'
+        : s === 'terminated'
+          ? 'Terminated'
       : s === 'offer'
         ? 'Offer'
       : s === 'pending'
@@ -683,7 +691,11 @@ const StudentDashboard = () => {
       const stageIsReview = stage === 'screening';
       const derivedStatus =
         a.status === 'approved'
-          ? 'intern'
+          ? (String(a.intern_status || '').toLowerCase() === 'terminated'
+            ? 'terminated'
+            : String(a.intern_status || '').toLowerCase() === 'completed'
+              ? 'completed'
+              : 'intern')
           : a.status === 'rejected'
             ? 'rejected'
             : a.status === 'withdrawn'
@@ -770,8 +782,18 @@ const StudentDashboard = () => {
     }
   };
 
-  const Overview = () => (
-    <div className="st-page">
+  const Overview = () => {
+    const currentInternship = derivedApplications.find((a) => {
+      if (a.status !== 'approved') return false;
+      const start = a?.internship?.start_date ? new Date(a.internship.start_date) : null;
+      const end = a?.internship?.end_date ? new Date(a.internship.end_date) : null;
+      if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return true;
+      const now = new Date();
+      return now >= start && now <= end;
+    });
+
+    return (
+      <div className="st-page">
       <section className="st-card st-hero">
         <div className="st-hero-left">
           <h2>
@@ -834,6 +856,42 @@ const StudentDashboard = () => {
           </div>
         </div>
       </section>
+
+      {currentInternship && (
+        <section className="st-card" style={{ border: '1px solid rgba(16,185,129,0.35)', background: 'rgba(16,185,129,0.06)' }}>
+          <div className="st-card-head">
+            <h3>Current internship</h3>
+            <StatusBadge status="intern" />
+          </div>
+          <div className="st-muted">
+            <strong>{currentInternship.internship?.title || 'Internship'}</strong> · {currentInternship.internship?.company?.name || 'Company'}
+          </div>
+          <div className="st-muted st-small" style={{ marginTop: 6 }}>
+            {currentInternship.internship?.start_date ? `Start: ${fmtDate(currentInternship.internship.start_date)}` : null}
+            {currentInternship.internship?.end_date ? ` · End: ${fmtDate(currentInternship.internship.end_date)}` : null}
+          </div>
+          <div className="st-actions" style={{ marginTop: 12 }}>
+            <button
+              className="st-btn secondary"
+              type="button"
+              onClick={() => {
+                const companyId =
+                  currentInternship.internship?.company?.id ||
+                  currentInternship.internship?.company_id ||
+                  currentInternship.internship_id;
+                setMessagesThreadKey(`company-${companyId}`);
+                setMessagesDraftPrefill(`Hello ${currentInternship.internship?.company?.name || ''}, I’m ready to start and would like to confirm next steps.`);
+                setActive('messages');
+              }}
+            >
+              Message company
+            </button>
+            <button className="st-btn secondary" type="button" onClick={() => setActive('progress')}>
+              Progress tracking
+            </button>
+          </div>
+        </section>
+      )}
 
       <section className="st-stat-row">
         <div className="st-stat">
@@ -940,8 +998,9 @@ const StudentDashboard = () => {
           <div className="st-empty">No activity yet.</div>
         )}
       </section>
-    </div>
-  );
+      </div>
+    );
+  };
 
   const BrowseInternships = () => (
     <div className="st-page">
