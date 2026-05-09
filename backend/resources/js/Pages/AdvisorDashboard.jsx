@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { router, usePage } from '@inertiajs/react';
 import { advisorAPI, aiAdvisorAPI } from '../services/http';
 import { interpretNlSearch, normalizePaginated } from './advisor/utils';
 import './advisor/AdvisorDashboard.css';
@@ -15,7 +16,27 @@ import AdvisorAnalytics from './advisor/components/AdvisorAnalytics/AdvisorAnaly
 import AIAssistant from './advisor/components/AIAssistant/AIAssistant';
 import AdvisorSettings from './advisor/components/AdvisorSettings/AdvisorSettings';
 
+function MustChangePasswordBanner({ auth }) {
+  if (!auth?.must_change_password) return null;
+  const next = typeof window !== 'undefined' ? window.location.pathname : '';
+  return (
+    <div className="adv-card" style={{ border: '1px solid #f59e0b', background: '#fffbeb' }}>
+      <strong>You must change your password</strong>
+      <div className="adv-muted" style={{ marginTop: 6 }}>
+        Your account is using a one-time password. Please update it now.
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <button type="button" className="adv-btn" onClick={() => router.visit(`/force-password-change?next=${encodeURIComponent(next)}`)}>
+          Change password
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const AdvisorDashboard = () => {
+  const { props } = usePage();
+  const auth = props?.auth || null;
   const [active, setActive] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dashboard, setDashboard] = useState(null);
@@ -425,6 +446,9 @@ const AdvisorDashboard = () => {
           notificationDigest={dashboard?.notification_digest}
         />
         <main className="adv-main">
+          <div style={{ marginBottom: 12 }}>
+            <MustChangePasswordBanner auth={auth} />
+          </div>
           {loading && (
             <div className="adv-card adv-skeleton">
               <p>Loading advisor workspace…</p>

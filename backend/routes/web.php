@@ -14,6 +14,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EvaluationController;
 use App\Http\Controllers\ExaminerController;
 use App\Http\Controllers\InternshipController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StudentDashboardController;
 use App\Http\Controllers\StudentExperienceController;
@@ -49,6 +50,8 @@ Route::get('/public/internships', [InternshipController::class, 'publicIndex']);
 Route::middleware('auth:web')->group(function () {
     Route::get('/refresh', [AuthController::class, 'refresh']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::get('/force-password-change', [AppController::class, 'forcePasswordChange']);
+    Route::put('/password', [AuthController::class, 'changePassword']);
 
     Route::get('/superadmin', [AppController::class, 'superAdminDashboard']);
     Route::get('/student-dashboard', [AppController::class, 'studentDashboard']);
@@ -78,6 +81,10 @@ Route::middleware('auth:web')->group(function () {
     Route::put('/reports/{id}', [ReportController::class, 'update']);
     Route::delete('/reports/{id}', [ReportController::class, 'destroy']);
 
+    // Notifications (DB-backed)
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::put('/notifications/{id}/read', [NotificationController::class, 'markRead']);
+
     Route::get('/evaluations', [EvaluationController::class, 'index']);
     Route::post('/evaluations', [EvaluationController::class, 'store']);
     Route::get('/evaluations/{id}', [EvaluationController::class, 'show']);
@@ -86,6 +93,14 @@ Route::middleware('auth:web')->group(function () {
 
     Route::prefix('admin')->group(function () {
         Route::get('/departments', [SuperAdminRegistrationController::class, 'departments']);
+        Route::post('/departments', [SuperAdminRegistrationController::class, 'storeDepartment']);
+        Route::put('/departments/{id}', [SuperAdminRegistrationController::class, 'updateDepartment']);
+        Route::delete('/departments/{id}', [SuperAdminRegistrationController::class, 'deleteDepartment']);
+        Route::get('/colleges', [SuperAdminRegistrationController::class, 'colleges']);
+        Route::post('/colleges', [SuperAdminRegistrationController::class, 'storeCollege']);
+        Route::put('/colleges/{id}', [SuperAdminRegistrationController::class, 'updateCollege']);
+        Route::delete('/colleges/{id}', [SuperAdminRegistrationController::class, 'deleteCollege']);
+        Route::get('/colleges/{collegeId}/departments', [SuperAdminRegistrationController::class, 'departmentsByCollege']);
         Route::get('/users', [SuperAdminRegistrationController::class, 'users']);
         Route::get('/logs', [SuperAdminRegistrationController::class, 'getAuditLogs']);
         Route::get('/approvals/summary', [SuperAdminRegistrationController::class, 'getApprovalsSummary']);

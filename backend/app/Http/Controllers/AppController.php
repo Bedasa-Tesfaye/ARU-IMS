@@ -23,6 +23,10 @@ class AppController extends Controller
         if (Auth::guard('web')->check()) {
             $user = Auth::guard('web')->user();
 
+            if ($user?->must_change_password) {
+                return redirect('/force-password-change');
+            }
+
             if ($user?->role === 'super_admin' || $user?->role === 'admin' || $user?->role === 'coordinator') {
                 return redirect('/superadmin');
             }
@@ -45,6 +49,14 @@ class AppController extends Controller
         }
 
         return Inertia::render('Login');
+    }
+
+    public function forcePasswordChange(Request $request)
+    {
+        return Inertia::render('ForcePasswordChange', [
+            'auth' => auth()->user(),
+            'next' => (string) $request->query('next', ''),
+        ]);
     }
 
     public function superAdminDashboard()

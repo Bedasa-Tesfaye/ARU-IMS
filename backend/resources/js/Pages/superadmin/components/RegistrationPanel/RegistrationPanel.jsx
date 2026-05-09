@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import AdvisorRegistration from "./AdvisorRegistration";
 import CompanyRegistration from "./CompanyRegistration";
 import ExaminerRegistration from "./ExaminerRegistration";
 import StudentRegistration from "./StudentRegistration";
 import "./RegistrationPanel.css";
+import { superAdminAPI } from "../../../../services/http";
 
 const types = [
     {
@@ -30,6 +31,9 @@ const RegistrationPanel = ({
     isSubmitting,
     onSelectType,
 }) => {
+    const [deptDraft, setDeptDraft] = useState({ name: "", code: "" });
+    const [deptBusy, setDeptBusy] = useState(false);
+    const [deptMsg, setDeptMsg] = useState("");
     const currentMeta = types.find((t) => t.id === activeSection);
     const step1 = !!activeSection && types.some((t) => t.id === activeSection);
     const step2 = step1;
@@ -69,6 +73,66 @@ const RegistrationPanel = ({
                     <span>Submit</span>
                 </div>
             </div>
+
+            {Array.isArray(departments) && departments.length === 0 && (
+                <div className="sa-empty-panel" style={{ marginTop: 14 }}>
+                    <h3>No departments found</h3>
+                    <p>
+                        Registration for students/examiners/advisors requires a
+                        department. Create at least one department to continue.
+                    </p>
+                    {deptMsg && (
+                        <p style={{ color: deptMsg.startsWith("✅") ? "#16a34a" : "#dc2626" }}>
+                            {deptMsg}
+                        </p>
+                    )}
+                    <div style={{ display: "grid", gap: 10, maxWidth: 520 }}>
+                        <input
+                            placeholder="Department name (e.g. Computer Science)"
+                            value={deptDraft.name}
+                            onChange={(e) =>
+                                setDeptDraft((p) => ({
+                                    ...p,
+                                    name: e.target.value,
+                                }))
+                            }
+                        />
+                        <input
+                            placeholder="Department code (e.g. CS)"
+                            value={deptDraft.code}
+                            onChange={(e) =>
+                                setDeptDraft((p) => ({
+                                    ...p,
+                                    code: e.target.value,
+                                }))
+                            }
+                        />
+                        <button
+                            type="button"
+                            className="sa-btn-secondary"
+                            disabled={deptBusy || !deptDraft.name.trim() || !deptDraft.code.trim()}
+                            onClick={async () => {
+                                setDeptBusy(true);
+                                setDeptMsg("");
+                                try {
+                                    await superAdminAPI.createDepartment({
+                                        name: deptDraft.name,
+                                        code: deptDraft.code,
+                                    });
+                                    setDeptMsg("✅ Department created. Click Refresh in the dashboard if needed.");
+                                    setDeptDraft({ name: "", code: "" });
+                                } catch (e) {
+                                    setDeptMsg(e?.response?.data?.message || "Failed to create department.");
+                                } finally {
+                                    setDeptBusy(false);
+                                }
+                            }}
+                        >
+                            {deptBusy ? "Creating..." : "Create department"}
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <div
                 className="sa-reg-type-grid"

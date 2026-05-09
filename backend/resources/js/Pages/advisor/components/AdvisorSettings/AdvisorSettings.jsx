@@ -1,8 +1,9 @@
-import React from 'react';
-import { advisorAPI } from '../../../../services/http';
+import React, { useState } from 'react';
+import { advisorAPI, authAPI } from '../../../../services/http';
 import './AdvisorSettings.css';
 
 export default function AdvisorSettings({ settingsDraft, setSettingsDraft, settings, setSettings, showToast }) {
+  const [pwd, setPwd] = useState({ current_password: '', new_password: '', new_password_confirmation: '' });
   return (
     <section className="adv-card adv-settings">
       <h3>Settings & preferences</h3>
@@ -62,6 +63,40 @@ export default function AdvisorSettings({ settingsDraft, setSettingsDraft, setti
         >
           Save settings
         </button>
+      </div>
+      <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #e5e7eb' }}>
+        <h4 style={{ margin: 0 }}>Change password</h4>
+        <div className="adv-settings-grid" style={{ marginTop: 10 }}>
+          <label>
+            Current password
+            <input type="password" value={pwd.current_password} onChange={(e) => setPwd((p) => ({ ...p, current_password: e.target.value }))} />
+          </label>
+          <label>
+            New password
+            <input type="password" value={pwd.new_password} onChange={(e) => setPwd((p) => ({ ...p, new_password: e.target.value }))} />
+          </label>
+          <label>
+            Confirm new password
+            <input type="password" value={pwd.new_password_confirmation} onChange={(e) => setPwd((p) => ({ ...p, new_password_confirmation: e.target.value }))} />
+          </label>
+        </div>
+        <div className="adv-inline-actions">
+          <button
+            type="button"
+            className="adv-btn"
+            onClick={async () => {
+              try {
+                await authAPI.changePassword(pwd);
+                showToast('Password updated.');
+                setPwd({ current_password: '', new_password: '', new_password_confirmation: '' });
+              } catch (e) {
+                showToast(e?.response?.data?.message || 'Password update failed.', 'error');
+              }
+            }}
+          >
+            Update password
+          </button>
+        </div>
       </div>
       <p className="adv-muted">Quiet hours, calendar sync (Google/Outlook), and mobile push — configure in institutional SSO settings.</p>
     </section>

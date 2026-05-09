@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { router } from '@inertiajs/react';
-import { aiCompanyAPI, companyAPI } from '../services/http';
+import { router, usePage } from '@inertiajs/react';
+import { aiCompanyAPI, authAPI, companyAPI, notificationAPI } from '../services/http';
 import './company/CompanyDashboard.css';
 import './company/components/CompanySidebar.css';
 import './company/components/CompanyHeader.css';
@@ -14,6 +14,7 @@ import './company/components/CompanyChat.css';
 
 const NAV = [
   { id: 'overview', label: 'Dashboard', icon: '📊' },
+  { id: 'notifications', label: 'Notifications', icon: '🔔' },
   { id: 'post', label: 'Post Internship', icon: '📋' },
   { id: 'manage', label: 'Manage Internships', icon: '📝' },
   { id: 'applicants', label: 'Applicants', icon: '👨‍🎓' },
@@ -67,7 +68,26 @@ function AnimatedStat({ value, label }) {
   );
 }
 
+function MustChangePasswordBanner({ auth, onGo }) {
+  if (!auth?.must_change_password) return null;
+  return (
+    <div className="co-card" style={{ border: '1px solid #f59e0b', background: '#fffbeb' }}>
+      <strong>You must change your password</strong>
+      <div className="co-muted" style={{ marginTop: 6 }}>
+        Your account is using a one-time password. Please update it now.
+      </div>
+      <div style={{ marginTop: 10 }}>
+        <button type="button" className="co-btn co-btn-sm" onClick={onGo}>
+          Change password
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const CompanyDashboard = () => {
+  const { props } = usePage();
+  const auth = props?.auth || null;
   const [active, setActive] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -77,9 +97,11 @@ const CompanyDashboard = () => {
   const [applicants, setApplicants] = useState([]);
   const [interns, setInterns] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [profile, setProfile] = useState(null);
   const [settings, setSettings] = useState(null);
+  const [pwd, setPwd] = useState({ current_password: '', new_password: '', new_password_confirmation: '' });
   const [postStep, setPostStep] = useState(1);
   const [postDraft, setPostDraft] = useState({
     title: '',
@@ -100,6 +122,7 @@ const CompanyDashboard = () => {
   });
   const [applicantView, setApplicantView] = useState('kanban');
   const [selectedApplicant, setSelectedApplicant] = useState(null);
+  const [decisionModal, setDecisionModal] = useState(null); // { type: 'approve'|'reject', applicantId, reason }
   const [findQuery, setFindQuery] = useState('');
   const [findResults, setFindResults] = useState([]);
   const [evalDraft, setEvalDraft] = useState({
@@ -158,7 +181,26 @@ const CompanyDashboard = () => {
     } finally {
       setLoading(false);
     }
+
+    // Load notifications separately so they don't break the whole dashboard if they fail.
+    try {
+      const notifRes = await notificationAPI.list({ per_page: 25 });
+      setNotifications(normalizePaginated(notifRes).data);
+    } catch (e) {
+      console.warn('Failed to load notifications', e);
+    }
   }, [showToast]);
+
+  const markNotificationRead = async (id) => {
+    try {
+      await notificationAPI.markRead(id);
+      // refresh only notifications
+      const notifRes = await notificationAPI.list({ per_page: 25 });
+      setNotifications(normalizePaginated(notifRes).data);
+    } catch {
+      showToast('Could not mark notification as read.', 'error');
+    }
+  };
 
   useEffect(() => {
     loadCore();
@@ -166,6 +208,11 @@ const CompanyDashboard = () => {
 
   const stats = dashboard?.stats || {};
   const funnel = dashboard?.recruitment_funnel || {};
+
+  const unreadNotificationCount = useMemo(
+    () => (notifications || []).filter((n) => !n.read_at).length,
+    [notifications],
+  );
 
   const applicantsByStage = useMemo(() => {
     const buckets = Object.fromEntries(PIPELINE_COLS.map((k) => [k, []]));
@@ -295,6 +342,53 @@ const CompanyDashboard = () => {
     </div>
   );
 
+  const renderNotifications = () => (
+    <div className="co-card">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <h3 style={{ margin: 0 }}>🔔 Notifications</h3>
+        <button className="co-btn ghost co-btn-sm" type="button" onClick={() => loadCore()}>
+          Refresh
+        </button>
+      </div>
+
+      {(notifications || []).length === 0 ? (
+        <div style={{ padding: 18 }} className="co-muted">
+          No notifications yet. New student applications will appear here.
+        </div>
+      ) : (
+        <div style={{ marginTop: 12 }}>
+          <div className="co-muted" style={{ marginBottom: 10 }}>
+            Unread: {unreadNotificationCount}
+          </div>
+          <ul className="co-alert-list">
+            {(notifications || []).map((n) => (
+              <li
+                key={n.id}
+                style={{
+                  display: 'flex',
+                  gap: 10,
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  opacity: n.read_at ? 0.75 : 1,
+                }}
+              >
+                <span>
+                  <strong>{n.title}</strong>
+                  <div className="co-muted">{n.message}</div>
+                </span>
+                {!n.read_at && (
+                  <button className="co-btn ghost co-btn-sm" type="button" onClick={() => markNotificationRead(n.id)}>
+                    Mark read
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+
   const renderPost = () => (
     <div className="co-card">
       <h3>📋 Post Internship (AI-Assisted)</h3>
@@ -387,13 +481,13 @@ const CompanyDashboard = () => {
                     <button className="co-btn ghost co-btn-sm" onClick={()=>openApplicant(a.id)}>Details</button>
                     {a.status !== 'approved' && (
                       <button className="co-btn co-btn-sm" style={{background:'#10b981',color:'white',border:'none',fontSize:'0.7rem',padding:'4px 8px'}}
-                        onClick={()=>{if(window.confirm('Approve this applicant? They will become an intern.')){companyAPI.approveApplicant(a.id).then(()=>{showToast('Approved! Student is now an intern. 🎉');loadCore();}).catch(()=>showToast('Failed to approve','error'));}}}>
+                        onClick={()=>setDecisionModal({ type: 'approve', applicantId: a.id })}>
                         ✅ Approve
                       </button>
                     )}
                     {a.status !== 'rejected' && (
                       <button className="co-btn ghost co-btn-sm" style={{color:'#ef4444',fontSize:'0.7rem',padding:'4px 8px'}}
-                        onClick={()=>{const reason=prompt('Rejection reason (optional):');companyAPI.rejectApplicant(a.id,reason).then(()=>{showToast('Rejected');loadCore();}).catch(()=>showToast('Failed to reject','error'));}}>
+                        onClick={()=>setDecisionModal({ type: 'reject', applicantId: a.id, reason: '' })}>
                         ❌ Reject
                       </button>
                     )}
@@ -418,8 +512,8 @@ const CompanyDashboard = () => {
                   <td>
                     <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
                       <button className="co-btn ghost co-btn-sm" onClick={()=>openApplicant(a.id)}>Open</button>
-                      {a.status!=='approved'&&<button className="co-btn co-btn-sm" style={{background:'#10b981',color:'white',border:'none'}} onClick={()=>{if(window.confirm('Approve?')){companyAPI.approveApplicant(a.id).then(()=>{showToast('Approved!🎉');loadCore();});}}}>✅</button>}
-                      {a.status!=='rejected'&&<button className="co-btn ghost co-btn-sm" style={{color:'#ef4444'}} onClick={()=>{const r=prompt('Reason:');companyAPI.rejectApplicant(a.id,r).then(()=>{showToast('Rejected');loadCore();});}}>❌</button>}
+                      {a.status!=='approved'&&<button className="co-btn co-btn-sm" style={{background:'#10b981',color:'white',border:'none'}} onClick={()=>setDecisionModal({ type: 'approve', applicantId: a.id })}>✅</button>}
+                      {a.status!=='rejected'&&<button className="co-btn ghost co-btn-sm" style={{color:'#ef4444'}} onClick={()=>setDecisionModal({ type: 'reject', applicantId: a.id, reason: '' })}>❌</button>}
                     </div>
                   </td>
                 </tr>
@@ -438,9 +532,57 @@ const CompanyDashboard = () => {
             <h4>Interview questions</h4>
             <ul>{(selectedApplicant.ai_insights?.interview_questions||[]).map((q,i)=>(<li key={i}>{q}</li>))}</ul>
             <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:12}}>
-              <button className="co-btn co-btn-sm" onClick={()=>{companyAPI.approveApplicant(selectedApplicant.application?.id||selectedApplicant.id).then(()=>{showToast('Approved! 🎉');setSelectedApplicant(null);loadCore();});}}>✅ Approve</button>
-              <button className="co-btn ghost co-btn-sm" style={{color:'#ef4444'}} onClick={()=>{const r=prompt('Reason:');companyAPI.rejectApplicant(selectedApplicant.application?.id||selectedApplicant.id,r).then(()=>{showToast('Rejected');setSelectedApplicant(null);loadCore();});}}>❌ Reject</button>
+              <button className="co-btn co-btn-sm" onClick={()=>setDecisionModal({ type: 'approve', applicantId: selectedApplicant.application?.id||selectedApplicant.id })}>✅ Approve</button>
+              <button className="co-btn ghost co-btn-sm" style={{color:'#ef4444'}} onClick={()=>setDecisionModal({ type: 'reject', applicantId: selectedApplicant.application?.id||selectedApplicant.id, reason: '' })}>❌ Reject</button>
               <button className="co-btn ghost co-btn-sm" onClick={()=>setSelectedApplicant(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {decisionModal && (
+        <div className="co-modal-overlay" role="dialog" onClick={() => setDecisionModal(null)}>
+          <div className="co-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>{decisionModal.type === 'approve' ? 'Approve applicant' : 'Reject applicant'}</h3>
+            <p className="co-muted">
+              {decisionModal.type === 'approve'
+                ? 'Approving will assign this student as an intern.'
+                : 'Optionally provide a reason for rejection.'}
+            </p>
+            {decisionModal.type === 'reject' && (
+              <textarea
+                rows={4}
+                placeholder="Reason (optional)"
+                value={decisionModal.reason || ''}
+                onChange={(e) => setDecisionModal((p) => ({ ...p, reason: e.target.value }))}
+              />
+            )}
+            <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:12}}>
+              <button
+                className="co-btn co-btn-sm"
+                style={decisionModal.type === 'approve' ? { background:'#10b981', color:'white', border:'none' } : undefined}
+                onClick={async () => {
+                  const id = decisionModal.applicantId;
+                  try {
+                    if (decisionModal.type === 'approve') {
+                      await companyAPI.approveApplicant(id);
+                      showToast('Approved! Student moved to Current Interns. 🎉');
+                      setActive('interns');
+                    } else {
+                      await companyAPI.rejectApplicant(id, decisionModal.reason);
+                      showToast('Rejected.');
+                    }
+                    setDecisionModal(null);
+                    setSelectedApplicant(null);
+                    await loadCore();
+                  } catch {
+                    showToast(`Failed to ${decisionModal.type}.`, 'error');
+                  }
+                }}
+              >
+                {decisionModal.type === 'approve' ? 'Approve' : 'Reject'}
+              </button>
+              <button className="co-btn ghost co-btn-sm" onClick={() => setDecisionModal(null)}>Cancel</button>
             </div>
           </div>
         </div>
@@ -537,11 +679,33 @@ const CompanyDashboard = () => {
         <label>AI level<select value={settings?.ai_assistance_level||'balanced'} onChange={(e)=>companyAPI.updateSettings({ai_assistance_level:e.target.value}).then((r)=>setSettings(r.data?.settings??settings))}><option value="minimal">Minimal</option><option value="balanced">Balanced</option><option value="maximum">Maximum</option></select></label>
         <label>AI communication style<select value={settings?.ai_communication_style||'balanced'} onChange={(e)=>companyAPI.updateSettings({ai_communication_style:e.target.value}).then((r)=>setSettings(r.data?.settings??settings))}><option value="formal">Formal</option><option value="balanced">Balanced</option><option value="friendly">Friendly</option></select></label>
       </div>
+      <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid #e5e7eb' }}>
+        <h4 style={{ margin: 0 }}>Change password</h4>
+        <div className="co-form-grid" style={{ marginTop: 10 }}>
+          <label>Current password<input type="password" value={pwd.current_password} onChange={(e)=>setPwd((p)=>({ ...p, current_password: e.target.value }))} /></label>
+          <label>New password<input type="password" value={pwd.new_password} onChange={(e)=>setPwd((p)=>({ ...p, new_password: e.target.value }))} /></label>
+          <label>Confirm new password<input type="password" value={pwd.new_password_confirmation} onChange={(e)=>setPwd((p)=>({ ...p, new_password_confirmation: e.target.value }))} /></label>
+        </div>
+        <button
+          className="co-btn co-btn-sm"
+          onClick={async () => {
+            try {
+              await authAPI.changePassword(pwd);
+              showToast('Password updated.');
+              setPwd({ current_password: '', new_password: '', new_password_confirmation: '' });
+            } catch (e) {
+              showToast(e?.response?.data?.message || 'Password update failed.', 'error');
+            }
+          }}
+        >
+          Update password
+        </button>
+      </div>
     </div>
   );
 
   const content = {
-    overview: renderOverview(), post: renderPost(), manage: renderManage(),
+    overview: renderOverview(), notifications: renderNotifications(), post: renderPost(), manage: renderManage(),
     applicants: renderApplicants(), find: renderFind(), interns: renderInterns(),
     evaluations: renderEvaluations(), messages: renderMessages(), schedule: renderSchedule(),
     analytics: renderAnalytics(), profile: renderProfile(), ai: renderAI(), settings: renderSettings(),
@@ -555,6 +719,11 @@ const CompanyDashboard = () => {
           {NAV.map((n)=>(
             <button key={n.id} className={`co-nav ${active===n.id?'active':''}`} onClick={()=>{setActive(n.id);setSidebarOpen(false);}}>
               <span>{n.icon}</span> {n.label}
+              {n.id === 'notifications' && unreadNotificationCount > 0 && (
+                <span style={{ marginLeft: 'auto', fontSize: 12, background: '#ef4444', color: '#fff', borderRadius: 999, padding: '2px 8px' }}>
+                  {unreadNotificationCount}
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -565,7 +734,18 @@ const CompanyDashboard = () => {
           <button className="co-burger" onClick={()=>setSidebarOpen((o)=>!o)}>☰</button>
           <h1 className="co-title">{NAV.find((x)=>x.id===active)?.label}</h1>
         </header>
-        <main className="co-main">{loading?<div className="co-card">Loading…</div>:content[active]}</main>
+        <main className="co-main">
+          <div style={{ marginBottom: 12 }}>
+            <MustChangePasswordBanner
+              auth={auth}
+              onGo={() => {
+                const next = typeof window !== 'undefined' ? window.location.pathname : '';
+                router.visit(`/force-password-change?next=${encodeURIComponent(next)}`);
+              }}
+            />
+          </div>
+          {loading ? <div className="co-card">Loading…</div> : content[active]}
+        </main>
       </div>
       {toast&&<div className={`co-toast ${toast.type}`}>{toast.message}</div>}
     </div>

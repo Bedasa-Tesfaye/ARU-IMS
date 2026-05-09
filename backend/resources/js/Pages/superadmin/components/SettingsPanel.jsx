@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { authAPI } from '../../../services/http';
 import './SettingsPanel.css';
 
 export default function SettingsPanel({ credentialPolicy, onCredentialUpdated }) {
@@ -57,6 +58,8 @@ export default function SettingsPanel({ credentialPolicy, onCredentialUpdated })
     failed_login_limit: 5,
     lockout_minutes: 30,
   });
+
+  const [pwd, setPwd] = useState({ current_password: '', new_password: '', new_password_confirmation: '' });
 
   useEffect(() => {
     if (!credentialPolicy) return;
@@ -341,6 +344,50 @@ export default function SettingsPanel({ credentialPolicy, onCredentialUpdated })
             </tr>
           </tbody>
         </table>
+      </section>
+
+      <section className="sa-settings-card">
+        <h2>🔑 Change password</h2>
+        <p className="sa-muted">Update your own password (required when using one-time credentials).</p>
+        <label>
+          Current password
+          <input
+            type="password"
+            value={pwd.current_password}
+            onChange={(e) => setPwd((p) => ({ ...p, current_password: e.target.value }))}
+          />
+        </label>
+        <label>
+          New password
+          <input
+            type="password"
+            value={pwd.new_password}
+            onChange={(e) => setPwd((p) => ({ ...p, new_password: e.target.value }))}
+          />
+        </label>
+        <label>
+          Confirm new password
+          <input
+            type="password"
+            value={pwd.new_password_confirmation}
+            onChange={(e) => setPwd((p) => ({ ...p, new_password_confirmation: e.target.value }))}
+          />
+        </label>
+        <button
+          type="button"
+          className="sa-btn-secondary"
+          onClick={async () => {
+            try {
+              await authAPI.changePassword(pwd);
+              toast.success('Password updated.');
+              setPwd({ current_password: '', new_password: '', new_password_confirmation: '' });
+            } catch (e) {
+              toast.error(e?.response?.data?.message || 'Password update failed.');
+            }
+          }}
+        >
+          Update password
+        </button>
       </section>
     </div>
   );

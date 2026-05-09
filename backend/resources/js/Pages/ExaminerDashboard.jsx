@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { aiExaminerAPI, examinerAPI } from '../services/http';
 import ExaminerHeader from './examiner/components/ExaminerHeader';
 import ExaminerSidebar from './examiner/components/ExaminerSidebar';
@@ -25,7 +25,23 @@ const NAV = [
 
 const PAGE_META = Object.fromEntries(NAV.map((n) => [n.id, n]));
 
+function MustChangePasswordBanner({ auth }) {
+  if (!auth?.must_change_password) return null;
+  const next = typeof window !== 'undefined' ? window.location.pathname : '';
+  return (
+    <div className="examiner-card" style={{ border: '1px solid #f59e0b', background: '#fffbeb' }}>
+      <h3 style={{ marginTop: 0 }}>You must change your password</h3>
+      <p style={{ marginTop: 6 }}>Your account is using a one-time password. Please update it now.</p>
+      <button type="button" className="btn primary" onClick={() => router.visit(`/force-password-change?next=${encodeURIComponent(next)}`)}>
+        Change password
+      </button>
+    </div>
+  );
+}
+
 const ExaminerDashboard = () => {
+  const { props } = usePage();
+  const auth = props?.auth || null;
   const [active, setActive] = useState('overview');
   const [collapsed, setCollapsed] = useState(false);
   const [search, setSearch] = useState('');
@@ -817,6 +833,7 @@ const ExaminerDashboard = () => {
           onSearch={setSearch}
           searchPlaceholder="Search students, reports, sessions..."
         />
+        <MustChangePasswordBanner auth={auth} />
         {loading && <div className="skeleton-grid"><div className="skeleton-card" /><div className="skeleton-card" /><div className="skeleton-card" /></div>}
         {!loading && error && <div className="examiner-card error-state">{error}</div>}
         {!loading && !error && <section className="page-body">{content[active]}</section>}

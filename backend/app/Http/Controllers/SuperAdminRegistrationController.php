@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\AdminAuditLog;
+use App\Models\College;
 use App\Models\Company;
 use App\Models\Department;
 use App\Models\Internship;
 use App\Models\User;
 use App\Services\CredentialService;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -16,6 +18,67 @@ use Illuminate\Validation\Rule;
 
 class SuperAdminRegistrationController extends Controller
 {
+    private const COLLEGE_DEPARTMENT_MAP = [
+        'College of Health Sciences' => [
+            'Medicine',
+            'Nursing',
+            'Public Health',
+            'Midwifery',
+            'Medical Laboratory Science',
+            'Anesthesia',
+            'Pharmacy',
+        ],
+        'College of Agriculture and Environmental Science' => [
+            'Plant Science',
+            'Animal Science',
+            'Horticulture',
+            'Agricultural Economics',
+            'Agribusiness and Value Chain Management',
+            'Food Science and Post-Harvest Technology',
+            'Natural Resource Management',
+            'Soil Resource and Water Management',
+            'Forestry',
+            'Rural Development and Agricultural Extension',
+            'Veterinary Science',
+            'Statistics',
+        ],
+        'College of Business and Economics' => [
+            'Accounting and Finance',
+            'Economics',
+            'Management',
+            'Marketing Management',
+            'Logistics and Supply Chain Management',
+            'Management Information Systems (MIS)',
+            'International Trade and Investment Management',
+            'Tourism and Hospitality Management',
+        ],
+        'College of Education and Behavioral Science' => [
+            'Educational Leadership and Management',
+            'Psychology',
+            "Curriculum and Teachers' Professional Development",
+            'Adult Education and Community Development',
+            'Special Needs and Inclusive Education',
+            'Early Childhood Care and Education',
+        ],
+        'College of Social Sciences and Humanities' => [
+            'English Language and Literature',
+            'Afaan Oromoo and Literature',
+            'History and Heritage Management',
+            'Geography and Environmental Studies',
+            'Sociology and Social Work',
+            'Civic and Ethical Studies',
+            'Gadaa and Oromo Folklore',
+        ],
+        'College of Natural and Computational Sciences' => [
+            'Biology',
+            'Chemistry',
+            'Physics',
+            'Mathematics',
+            'Computer Science',
+            'Sport Science',
+        ],
+    ];
+
     public function __construct(private readonly CredentialService $credentialService)
     {
     }
@@ -29,6 +92,176 @@ class SuperAdminRegistrationController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name', 'code'])
         );
+    }
+
+    public function colleges(Request $request)
+    {
+        $this->ensureSuperAdmin($request);
+
+        return response()->json(
+            College::query()
+                ->orderBy('name')
+                ->get(['id', 'name', 'code', 'description'])
+        );
+    }
+
+    public function storeCollege(Request $request)
+    {
+        $this->ensureSuperAdmin($request);
+
+        $validated = Validator::make($request->all(), [
+            'name' => ['required', 'string', 'max:255', Rule::unique('colleges', 'name')],
+            'code' => ['required', 'string', 'max:30', Rule::unique('colleges', 'code')],
+            'description' => ['nullable', 'string', 'max:2000'],
+        ])->validate();
+
+        $college = College::query()->create([
+            'name' => trim((string) $validated['name']),
+            'code' => strtoupper(trim((string) $validated['code'])),
+            'description' => $validated['description'] ?? null,
+        ]);
+
+        $this->logAudit($request, 'registration', 'create_college', 'info', "College created: {$college->name}", [
+            'college_id' => $college->id,
+            'name' => $college->name,
+            'code' => $college->code,
+        ]);
+
+        return response()->json([
+            'message' => 'College created successfully.',
+            'college' => $college,
+        ], 201);
+    }
+
+    public function updateCollege(Request $request, int $id)
+    {
+        $this->ensureSuperAdmin($request);
+        $college = College::query()->findOrFail($id);
+
+        $validated = Validator::make($request->all(), [
+            'name' => ['required', 'string', 'max:255', Rule::unique('colleges', 'name')->ignore($college->id)],
+            'code' => ['required', 'string', 'max:30', Rule::unique('colleges', 'code')->ignore($college->id)],
+            'description' => ['nullable', 'string', 'max:2000'],
+        ])->validate();
+
+        $college->update([
+            'name' => trim((string) $validated['name']),
+            'code' => strtoupper(trim((string) $validated['code'])),
+            'description' => $validated['description'] ?? null,
+        ]);
+
+        $this->logAudit($request, 'registration', 'update_college', 'info', "College updated: {$college->name}", [
+            'college_id' => $college->id,
+            'name' => $college->name,
+            'code' => $college->code,
+        ]);
+
+        return response()->json(['message' => 'College updated.', 'college' => $college->fresh()]);
+    }
+
+    public function deleteCollege(Request $request, int $id)
+    {
+        $this->ensureSuperAdmin($request);
+        $college = College::query()->findOrFail($id);
+        $name = $college->name;
+
+        try {
+            $college->delete();
+        } catch (QueryException $e) {
+            return response()->json(['message' => 'This college is in use and cannot be deleted.'], 422);
+        }
+
+        $this->logAudit($request, 'registration', 'delete_college', 'warning', "College deleted: {$name}", [
+            'college_id' => $id,
+            'name' => $name,
+        ]);
+
+        return response()->json(['message' => 'College deleted.']);
+    }
+
+    public function departmentsByCollege(Request $request, int $collegeId)
+    {
+        $this->ensureSuperAdmin($request);
+
+        $college = College::query()->findOrFail($collegeId);
+        $departmentNames = self::COLLEGE_DEPARTMENT_MAP[$college->name] ?? [];
+        if (empty($departmentNames)) {
+            return response()->json([]);
+        }
+
+        return response()->json(
+            Department::query()
+                ->whereIn('name', $departmentNames)
+                ->orderBy('name')
+                ->get(['id', 'name', 'code'])
+        );
+    }
+
+    public function storeDepartment(Request $request)
+    {
+        $this->ensureSuperAdmin($request);
+
+        $validated = Validator::make($request->all(), [
+            'name' => ['required', 'string', 'max:255', Rule::unique('departments', 'name')],
+            'code' => ['required', 'string', 'max:50', Rule::unique('departments', 'code')],
+        ])->validate();
+
+        $dept = Department::query()->create([
+            'name' => trim((string) $validated['name']),
+            'code' => strtoupper(trim((string) $validated['code'])),
+        ]);
+
+        $this->logAudit($request, 'registration', 'create_department', 'info', "Department created: {$dept->name}", [
+            'department_id' => $dept->id,
+            'name' => $dept->name,
+            'code' => $dept->code,
+        ]);
+
+        return response()->json(['message' => 'Department created.', 'department' => $dept], 201);
+    }
+
+    public function updateDepartment(Request $request, int $id)
+    {
+        $this->ensureSuperAdmin($request);
+        $dept = Department::query()->findOrFail($id);
+
+        $validated = Validator::make($request->all(), [
+            'name' => ['required', 'string', 'max:255', Rule::unique('departments', 'name')->ignore($dept->id)],
+            'code' => ['required', 'string', 'max:50', Rule::unique('departments', 'code')->ignore($dept->id)],
+        ])->validate();
+
+        $dept->update([
+            'name' => trim((string) $validated['name']),
+            'code' => strtoupper(trim((string) $validated['code'])),
+        ]);
+
+        $this->logAudit($request, 'registration', 'update_department', 'info', "Department updated: {$dept->name}", [
+            'department_id' => $dept->id,
+            'name' => $dept->name,
+            'code' => $dept->code,
+        ]);
+
+        return response()->json(['message' => 'Department updated.', 'department' => $dept->fresh()]);
+    }
+
+    public function deleteDepartment(Request $request, int $id)
+    {
+        $this->ensureSuperAdmin($request);
+        $dept = Department::query()->findOrFail($id);
+        $name = $dept->name;
+
+        try {
+            $dept->delete();
+        } catch (QueryException $e) {
+            return response()->json(['message' => 'This department is in use and cannot be deleted.'], 422);
+        }
+
+        $this->logAudit($request, 'registration', 'delete_department', 'warning', "Department deleted: {$name}", [
+            'department_id' => $id,
+            'name' => $name,
+        ]);
+
+        return response()->json(['message' => 'Department deleted.']);
     }
 
     public function registerStudent(Request $request)

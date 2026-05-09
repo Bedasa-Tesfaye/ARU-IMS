@@ -112,6 +112,15 @@ class AuthController extends Controller
                     return back()->withErrors(['email' => 'Account is deactivated'])->withInput();
                 }
 
+                if ($user && $user->must_change_password) {
+                    $next = $request->input('next') ?: null;
+                    $url = '/force-password-change' . ($next ? ('?next=' . urlencode((string) $next)) : '');
+                    if ($isInertia) {
+                        return Inertia::location($url);
+                    }
+                    return redirect($url);
+                }
+
                 $redirectTo = '/';
                 if ($user && in_array($user->role, ['super_admin', 'admin', 'coordinator'], true)) {
                     $redirectTo = '/superadmin';
@@ -162,6 +171,29 @@ class AuthController extends Controller
             'user' => $user,
             'token' => $token,
         ]);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $user = Auth::guard('web')->user();
+        abort_unless($user, 401, 'Unauthorized');
+
+        $validated = Validator::make($request->all(), [
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:8|confirmed',
+        ])->validate();
+
+        if (!Hash::check((string) $validated['current_password'], (string) $user->password)) {
+            return response()->json(['message' => 'Current password is incorrect.'], 422);
+        }
+
+        $user->update([
+            'password' => Hash::make((string) $validated['new_password']),
+            'must_change_password' => false,
+            'password_changed_at' => now(),
+        ]);
+
+        return response()->json(['message' => 'Password updated.']);
     }
 
     public function logout(Request $request)

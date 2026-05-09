@@ -116,9 +116,8 @@ class CompanyController extends Controller
         ]);
 
         $internship = $app->internship;
-        if ($internship) {
-            $internship->increment('current_applicants');
-        }
+        // NOTE: `current_applicants` is incremented on application submission.
+        // Approving an application should not increment it again.
 
         // Notify student
         $student = $app->student;

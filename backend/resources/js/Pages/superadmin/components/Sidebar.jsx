@@ -32,6 +32,7 @@ const Sidebar = ({ activeSection, setActiveSection, sidebarOpen, setSidebarOpen,
         { id: 'company', label: 'Company Registration', icon: '🏢' },
         { id: 'examiner', label: 'Examiner Registration', icon: '👨‍🏫' },
         { id: 'advisor', label: 'Advisor Registration', icon: '👨‍💼' },
+        { id: 'college-management', label: 'College Management', icon: '🏫' },
       ],
     },
     {

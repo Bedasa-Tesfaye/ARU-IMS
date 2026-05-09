@@ -7,6 +7,7 @@ use App\Models\Department;
 use App\Models\Internship;
 use App\Models\Application;
 use App\Models\Notification;
+use App\Models\StudentDocument;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -487,6 +488,18 @@ class InternshipController extends Controller
             return response()->json(['error' => 'You have already applied for this internship'], 422);
         }
 
+        $hasResume = StudentDocument::query()
+            ->where('student_id', $student->id)
+            ->where('type', 'resume')
+            ->where('is_active', true)
+            ->exists();
+        if (!$hasResume) {
+            return response()->json([
+                'error' => 'Please upload your CV/Resume before applying.',
+                'code' => 'resume_required',
+            ], 422);
+        }
+
         $validator = Validator::make($request->all(), [
             'cover_letter' => 'required|string',
             'resume_path' => 'nullable|string',
@@ -505,6 +518,27 @@ class InternshipController extends Controller
         ]);
 
         $internship->incrementApplicants();
+
+        // Notify company users (so the request "arrives" to the company inbox/dashboard)
+        $internship->loadMissing('company.users');
+        $companyUsers = $internship->company?->users()
+            ->where('role', 'company')
+            ->get() ?? collect();
+
+        foreach ($companyUsers as $companyUser) {
+            Notification::create([
+                'user_id' => $companyUser->id,
+                'type' => 'internship_application',
+                'title' => 'New internship application',
+                'message' => ($student->full_name ?? 'A student') . " applied for \"{$internship->title}\".",
+                'meta' => [
+                    'application_id' => $application->id,
+                    'internship_id' => $internship->id,
+                    'student_id' => $student->id,
+                    'company_id' => $internship->company_id,
+                ],
+            ]);
+        }
 
         return response()->json([
             'message' => 'Application submitted successfully',

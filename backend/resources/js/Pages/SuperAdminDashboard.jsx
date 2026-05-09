@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { router } from "@inertiajs/react";
+import { router, usePage } from "@inertiajs/react";
 import Header from "./superadmin/components/Header/Header";
 import OverviewStats from "./superadmin/components/OverviewStats";
 import PendingApprovalsPanel from "./superadmin/components/PendingApprovalsPanel/PendingApprovalsPanel";
 import AssignPanel from "./superadmin/components/AssignPanel/AssignPanel";
 import RegistrationPanel from "./superadmin/components/RegistrationPanel/RegistrationPanel";
+import CollegeManagementPanel from "./superadmin/components/CollegeManagementPanel";
 import Sidebar from "./superadmin/components/Sidebar";
 import UserManagementPanel from "./superadmin/components/UserManagementPanel";
 import CredentialsModal from "./superadmin/components/CredentialsModal";
@@ -16,6 +17,39 @@ import { normalizeUser } from "./superadmin/utils/userHelpers";
 import { superAdminAPI } from "../services/http";
 import { Toaster, toast } from "react-hot-toast";
 import "./superadmin/SuperAdminDashboard.css";
+
+function MustChangePasswordBanner({ auth }) {
+    if (!auth?.must_change_password) return null;
+    const next = typeof window !== "undefined" ? window.location.pathname : "";
+    return (
+        <div
+            className="sa-card"
+            style={{
+                border: "1px solid #f59e0b",
+                background: "#fffbeb",
+                margin: "16px 0",
+            }}
+        >
+            <strong>You must change your password</strong>
+            <div className="sa-muted" style={{ marginTop: 6 }}>
+                Your account is using a one-time password. Please update it now.
+            </div>
+            <div style={{ marginTop: 10 }}>
+                <button
+                    type="button"
+                    className="sa-btn-secondary"
+                    onClick={() =>
+                        router.visit(
+                            `/force-password-change?next=${encodeURIComponent(next)}`
+                        )
+                    }
+                >
+                    Change password
+                </button>
+            </div>
+        </div>
+    );
+}
 
 // ============================================
 // HELPER: Extract and normalize departments
@@ -63,12 +97,15 @@ const extractDepartments = (response) => {
 };
 
 const SuperAdminDashboard = () => {
+    const { props } = usePage();
+    const auth = props?.auth || null;
     const [activeSection, setActiveSection] = useState("overview");
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [loadingDashboard, setLoadingDashboard] = useState(true);
     const [users, setUsers] = useState([]);
     const [departments, setDepartments] = useState([]);
+    const [colleges, setColleges] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [generatedCredentials, setGeneratedCredentials] = useState([]);
     const [activeCredential, setActiveCredential] = useState(null);
@@ -101,39 +138,64 @@ const SuperAdminDashboard = () => {
     const loadData = async () => {
         setLoadingDashboard(true);
         try {
-            const [usersRes, departmentsRes, approvalsRes, reportsRes] =
-                await Promise.all([
+            const [usersResult, departmentsResult, approvalsResult, reportsResult] =
+                await Promise.allSettled([
                     superAdminAPI.getUsers(),
                     superAdminAPI.getDepartments(),
                     superAdminAPI.getApprovalsSummary(),
                     superAdminAPI.getReportsDashboard({}),
                 ]);
 
-            // Process users
-            setUsers((usersRes.data || []).map(normalizeUser));
-
-            // Process departments
-            const formattedDepts = extractDepartments(departmentsRes);
-            console.log(
-                "📋 Departments loaded:",
-                formattedDepts.length,
-                "departments",
-            );
-            console.log("📋 Sample:", formattedDepts.slice(0, 3));
-
-            if (formattedDepts.length === 0) {
-                // IMPORTANT: Do not fall back to hardcoded department IDs, because
-                // registration validation requires real database IDs.
-                console.warn("⚠️ No departments from API. Registration requires real department IDs.");
-                setDepartments([]);
-                toast.error("Departments could not be loaded. Please refresh and try again.");
+            if (usersResult.status === "fulfilled") {
+                setUsers((usersResult.value.data || []).map(normalizeUser));
             } else {
-                setDepartments(formattedDepts);
+                throw usersResult.reason;
             }
 
-            // Process approvals
-            setPendingApprovalsCount(approvalsRes.data?.total_pending || 0);
-            setReportsDashboard(reportsRes.data || null);
+            if (departmentsResult.status === "fulfilled") {
+                const formattedDepts = extractDepartments(departmentsResult.value);
+                console.log(
+                    "📋 Departments loaded:",
+                    formattedDepts.length,
+                    "departments",
+                );
+                console.log("📋 Sample:", formattedDepts.slice(0, 3));
+
+                if (formattedDepts.length === 0) {
+                    // IMPORTANT: Do not fall back to hardcoded department IDs, because
+                    // registration validation requires real database IDs.
+                    console.warn("⚠️ No departments configured in database yet.");
+                    setDepartments([]);
+                    toast(
+                        "No departments found yet. Create one in Registration Center to continue.",
+                    );
+                } else {
+                    setDepartments(formattedDepts);
+                }
+            } else {
+                setDepartments([]);
+                toast.error(
+                    departmentsResult.reason?.response?.data?.message ||
+                        "Departments could not be loaded. Please refresh and try again.",
+                );
+            }
+
+            try {
+                const collegesRes = await superAdminAPI.getColleges();
+                setColleges(collegesRes.data || []);
+            } catch (e) {
+                setColleges([]);
+                console.warn("Colleges load failed:", e?.message || e);
+            }
+
+            if (approvalsResult.status === "fulfilled") {
+                setPendingApprovalsCount(
+                    approvalsResult.value.data?.total_pending || 0,
+                );
+            }
+            if (reportsResult.status === "fulfilled") {
+                setReportsDashboard(reportsResult.value.data || null);
+            }
 
             // Load optional data
             try {
@@ -547,6 +609,123 @@ const SuperAdminDashboard = () => {
         }
     };
 
+    const handleCreateCollege = async (payload) => {
+        try {
+            const res = await superAdminAPI.createCollege(payload);
+            const created = res?.data?.college;
+            if (created) {
+                setColleges((prev) => {
+                    const dedup = new Map(
+                        [...prev, created].map((c) => [String(c.id), c]),
+                    );
+                    return Array.from(dedup.values());
+                });
+            } else {
+                const refresh = await superAdminAPI.getColleges();
+                setColleges(refresh.data || []);
+            }
+            toast.success(res?.data?.message || "College created successfully.");
+            addActivity("🏫", `College created: ${payload?.name || "New college"}`);
+        } catch (err) {
+            toast.error(
+                err.response?.data?.message || "Failed to create college.",
+            );
+            throw err;
+        }
+    };
+
+    const handleCreateDepartment = async (payload) => {
+        try {
+            const res = await superAdminAPI.createDepartment(payload);
+            const created = res?.data?.department;
+            if (created) {
+                setDepartments((prev) => {
+                    const dedup = new Map(
+                        [...prev, created].map((d) => [String(d.id), d]),
+                    );
+                    return Array.from(dedup.values());
+                });
+            } else {
+                const refresh = await superAdminAPI.getDepartments();
+                setDepartments(extractDepartments(refresh) || []);
+            }
+            toast.success(res?.data?.message || "Department created successfully.");
+            addActivity(
+                "🏛️",
+                `Department created: ${payload?.name || "New department"}`,
+            );
+        } catch (err) {
+            toast.error(
+                err.response?.data?.message || "Failed to create department.",
+            );
+            throw err;
+        }
+    };
+
+    const handleUpdateCollege = async (id, payload) => {
+        try {
+            const res = await superAdminAPI.updateCollege(id, payload);
+            const updated = res?.data?.college;
+            if (updated) {
+                setColleges((prev) =>
+                    prev.map((c) => (String(c.id) === String(id) ? updated : c)),
+                );
+            }
+            toast.success(res?.data?.message || "College updated.");
+            addActivity("🏫", `College updated: ${payload?.name || id}`);
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Failed to update college.");
+            throw err;
+        }
+    };
+
+    const handleDeleteCollege = async (id) => {
+        try {
+            const res = await superAdminAPI.deleteCollege(id);
+            setColleges((prev) => prev.filter((c) => String(c.id) !== String(id)));
+            toast.success(res?.data?.message || "College deleted.");
+            addActivity("🗑️", `College deleted (ID: ${id})`);
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Failed to delete college.");
+            throw err;
+        }
+    };
+
+    const handleUpdateDepartment = async (id, payload) => {
+        try {
+            const res = await superAdminAPI.updateDepartment(id, payload);
+            const updated = res?.data?.department;
+            if (updated) {
+                setDepartments((prev) =>
+                    prev.map((d) => (String(d.id) === String(id) ? updated : d)),
+                );
+            }
+            toast.success(res?.data?.message || "Department updated.");
+            addActivity("🏛️", `Department updated: ${payload?.name || id}`);
+        } catch (err) {
+            toast.error(
+                err.response?.data?.message || "Failed to update department.",
+            );
+            throw err;
+        }
+    };
+
+    const handleDeleteDepartment = async (id) => {
+        try {
+            const res = await superAdminAPI.deleteDepartment(id);
+            setDepartments((prev) =>
+                prev.filter((d) => String(d.id) !== String(id)),
+            );
+            toast.success(res?.data?.message || "Department deleted.");
+            addActivity("🗑️", `Department deleted (ID: ${id})`);
+        } catch (err) {
+            toast.error(
+                err.response?.data?.message || "Failed to delete department.",
+            );
+            throw err;
+        }
+    };
+
     // ============================================
     // RENDER
     // ============================================
@@ -617,6 +796,21 @@ const SuperAdminDashboard = () => {
                     onBulkRegister={handleBulkRegister}
                     isSubmitting={isSubmitting}
                     onSelectType={setActiveSection}
+                />
+            );
+        }
+        if (activeSection === "college-management") {
+            return (
+                <CollegeManagementPanel
+                    colleges={colleges}
+                    departments={departments}
+                    onCreateCollege={handleCreateCollege}
+                    onCreateDepartment={handleCreateDepartment}
+                    onUpdateCollege={handleUpdateCollege}
+                    onDeleteCollege={handleDeleteCollege}
+                    onUpdateDepartment={handleUpdateDepartment}
+                    onDeleteDepartment={handleDeleteDepartment}
+                    loading={loadingDashboard}
                 />
             );
         }
@@ -717,6 +911,7 @@ const SuperAdminDashboard = () => {
                     }}
                 />
 
+                <MustChangePasswordBanner auth={auth} />
                 <div className="sa-content-area">{renderContent()}</div>
 
                 {/* Generated Credentials Panel */}

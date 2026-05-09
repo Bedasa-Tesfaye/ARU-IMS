@@ -26,12 +26,21 @@ export const authAPI = {
   login: (payload) => http.post('/login', payload),
   logout: () => http.post('/logout'),
   getProfile: () => http.get('/me'),
+  changePassword: (payload) => http.put('/password', payload),
+};
+
+export const notificationAPI = {
+  list: (params) => http.get(`/notifications${buildQuery(params)}`),
+  markRead: (id) => http.put(`/notifications/${id}/read`),
 };
 
 export const superAdminAPI = {
   logout: () => http.post('/logout'),
   getUsers: () => http.get('/admin/users'),
   getDepartments: () => http.get('/admin/departments'),
+  createDepartment: (payload) => http.post('/admin/departments', payload),
+  updateDepartment: (id, payload) => http.put(`/admin/departments/${id}`, payload),
+  deleteDepartment: (id) => http.delete(`/admin/departments/${id}`),
   getApprovalsSummary: () => http.get('/admin/approvals/summary'),
   getApprovalsHistory: (params) => http.get(`/admin/approvals/history${buildQuery(params)}`),
   registerStudent: (payload) => http.post('/admin/register/student', payload),
@@ -56,6 +65,9 @@ export const superAdminAPI = {
   updateCredentialPolicy: (payload) => http.put('/admin/settings/credential-policy', payload),
   getAuditLogs: (params) => http.get(`/admin/logs${buildQuery(params)}`),
   getColleges: () => http.get('/admin/colleges'),
+  createCollege: (payload) => http.post('/admin/colleges', payload),
+  updateCollege: (id, payload) => http.put(`/admin/colleges/${id}`, payload),
+  deleteCollege: (id) => http.delete(`/admin/colleges/${id}`),
   getDepartmentsByCollege: (collegeId) => http.get(`/admin/colleges/${collegeId}/departments`),
   getUnassignedStudents: (params) => http.get(`/admin/students/unassigned${buildQuery(params)}`),
   getAvailableExaminers: (departmentId) => http.get(`/admin/departments/${departmentId}/examiners`),

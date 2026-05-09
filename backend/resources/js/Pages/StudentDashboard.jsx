@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { Toaster, toast } from 'react-hot-toast';
 import { aiAPI, authAPI, studentAPI } from '../services/http';
 import './student/StudentDashboard.css';
@@ -141,7 +141,7 @@ function CircularMeter({ value = 0, label, size = 58, color = '#10b981' }) {
 function StatusBadge({ status }) {
   const s = String(status || '').toLowerCase();
   const cls =
-    s === 'accepted' || s === 'approved'
+    s === 'intern' || s === 'accepted' || s === 'approved'
       ? 'accepted'
       : s === 'offer'
         ? 'accepted'
@@ -157,8 +157,8 @@ function StatusBadge({ status }) {
                 ? 'muted'
                 : 'pending';
   const text =
-    s === 'approved'
-      ? 'Accepted'
+    s === 'intern' || s === 'accepted' || s === 'approved'
+      ? 'Intern'
       : s === 'offer'
         ? 'Offer'
       : s === 'pending'
@@ -227,7 +227,31 @@ function SkeletonCard({ lines = 3 }) {
   );
 }
 
+function MustChangePasswordBanner({ auth }) {
+  if (!auth?.must_change_password) return null;
+  const next = typeof window !== 'undefined' ? window.location.pathname : '';
+  return (
+    <div className="st-card" style={{ border: '1px solid #f59e0b', background: '#fffbeb' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <strong>You must change your password</strong>
+          <div className="st-muted st-small" style={{ marginTop: 6 }}>
+            Your account is using a one-time password. Please update it now.
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button type="button" className="st-btn" onClick={() => router.visit(`/force-password-change?next=${encodeURIComponent(next)}`)}>
+            Change password
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const StudentDashboard = () => {
+  const { props } = usePage();
+  const auth = props?.auth || null;
   const [active, setActive] = useState('overview');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
@@ -555,6 +579,17 @@ const StudentDashboard = () => {
       setActive('applications');
       return;
     }
+
+    const hasResume = (documents || []).some((d) => d?.type === 'resume' && d?.is_active !== false);
+    const profileOk = Number(profileStrength || 0) >= 60;
+    if (!hasResume || !profileOk) {
+      toast.error(!hasResume ? 'Upload your CV/Resume before applying.' : 'Complete your profile (60%+) before applying.');
+      setDocumentsTab('resume');
+      setDocumentsPrefill({ tab: 'resume', title: 'My CV' });
+      setActive('documents');
+      return;
+    }
+
     try {
       await studentAPI.applyInternship(internshipId, { cover_letter: 'Generated via quick apply.', resume_path: null });
       toast.success('Application submitted.');
@@ -648,7 +683,7 @@ const StudentDashboard = () => {
       const stageIsReview = stage === 'screening';
       const derivedStatus =
         a.status === 'approved'
-          ? 'accepted'
+          ? 'intern'
           : a.status === 'rejected'
             ? 'rejected'
             : a.status === 'withdrawn'
@@ -668,7 +703,7 @@ const StudentDashboard = () => {
 
   const filteredApplications = useMemo(() => {
     if (applicationTab === 'all') return derivedApplications;
-    if (applicationTab === 'accepted') return derivedApplications.filter((a) => ['accepted', 'offer'].includes(a._derivedStatus));
+    if (applicationTab === 'accepted') return derivedApplications.filter((a) => ['intern', 'offer'].includes(a._derivedStatus));
     return derivedApplications.filter((a) => a._derivedStatus === applicationTab);
   }, [derivedApplications, applicationTab]);
 
@@ -691,9 +726,9 @@ const StudentDashboard = () => {
     const doneMap = {
       submitted: true,
       review: st !== 'pending',
-      shortlisted: ['shortlisted', 'interview', 'offer', 'accepted'].includes(st),
-      interview: ['interview', 'offer', 'accepted'].includes(st),
-      offer: ['offer', 'accepted'].includes(st),
+      shortlisted: ['shortlisted', 'interview', 'offer', 'intern'].includes(st),
+      interview: ['interview', 'offer', 'intern'].includes(st),
+      offer: ['offer', 'intern'].includes(st),
     };
     return list.map((step) => ({ ...step, done: Boolean(doneMap[step.key]) }));
   };
@@ -1075,6 +1110,11 @@ const StudentDashboard = () => {
 
   const InternshipCard = ({ job, view, saved, onSave, onApply, onShare }) => {
     const [open, setOpen] = useState(false);
+    const canApply = useMemo(() => {
+      const hasResume = (documents || []).some((d) => d?.type === 'resume' && d?.is_active !== false);
+      const profileOk = Number(profileStrength || 0) >= 60;
+      return hasResume && profileOk;
+    }, [documents, profileStrength]);
     const deadlineAt = job?.end_date ? new Date(`${job.end_date}T23:59:59`) : null;
     const left = daysUntil(deadlineAt || job?.end_date);
     const urgency = left == null ? 'green' : left <= 2 ? 'red' : left <= 7 ? 'orange' : 'green';
@@ -1144,8 +1184,29 @@ const StudentDashboard = () => {
           </div>
         )}
 
+        {!canApply && (
+          <div className="st-muted st-small" style={{ marginTop: 8 }}>
+            To apply: upload your CV/Resume and complete your profile (60%+).
+          </div>
+        )}
+
         <div className="st-job-actions">
-          <button className="st-btn" onClick={onApply}>
+          <button
+            className="st-btn"
+            disabled={!canApply}
+            aria-disabled={!canApply}
+            title={!canApply ? 'Upload CV/Resume and complete profile to apply' : 'Apply'}
+            onClick={() => {
+              if (!canApply) {
+                toast.error('Upload your CV/Resume and complete your profile (60%+) to apply.');
+                setDocumentsTab('resume');
+                setDocumentsPrefill({ tab: 'resume', title: 'My CV' });
+                setActive('documents');
+                return;
+              }
+              onApply();
+            }}
+          >
             Apply Now
           </button>
           <button className="st-btn secondary" onClick={onSave}>
@@ -1199,7 +1260,7 @@ const StudentDashboard = () => {
             ['under_review', 'Under Review'],
             ['shortlisted', 'Shortlisted'],
             ['interview', 'Interview'],
-            ['accepted', 'Accepted'],
+            ['accepted', 'Intern'],
             ['rejected', 'Rejected'],
             ['withdrawn', 'Withdrawn'],
           ].map(([id, label]) => (
@@ -1229,14 +1290,14 @@ const StudentDashboard = () => {
               </div>
               <div className="st-muted">Applied: {fmtDate(a.applied_date || a.created_at)}</div>
               <div className="st-progress">
-                {['Submitted', 'Review', 'Shortlisted', 'Interview', 'Offer'].map((step, idx) => {
+                {['Submitted', 'Review', 'Shortlisted', 'Interview', 'Intern'].map((step, idx) => {
                   const st = a._derivedStatus;
                   const done =
                     idx === 0 ||
-                    (idx === 1 && ['under_review', 'shortlisted', 'interview', 'offer', 'accepted', 'rejected', 'withdrawn'].includes(st)) ||
-                    (idx === 2 && ['shortlisted', 'interview', 'offer', 'accepted'].includes(st)) ||
-                    (idx === 3 && ['interview', 'offer', 'accepted'].includes(st)) ||
-                    (idx === 4 && ['offer', 'accepted'].includes(st));
+                    (idx === 1 && ['under_review', 'shortlisted', 'interview', 'offer', 'intern', 'rejected', 'withdrawn'].includes(st)) ||
+                    (idx === 2 && ['shortlisted', 'interview', 'offer', 'intern'].includes(st)) ||
+                    (idx === 3 && ['interview', 'offer', 'intern'].includes(st)) ||
+                    (idx === 4 && ['intern'].includes(st));
                   return (
                     <div key={step} className={`st-progress-step ${done ? 'done' : ''}`}>
                       <span />
@@ -2771,6 +2832,9 @@ const StudentDashboard = () => {
       </aside>
 
       <main className="st-main">
+        <div style={{ marginBottom: 12 }}>
+          <MustChangePasswordBanner auth={auth} />
+        </div>
         {!data && (
           <div className="st-grid-2">
             <SkeletonCard />
