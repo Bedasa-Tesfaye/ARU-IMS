@@ -1,9 +1,200 @@
-/* ============================================ */
-/* EVALUATION FORM - CRITERIA SCORING            */
-/* ============================================ */
-.evaluation-form { display: grid; gap: 10px; margin-top: 10px; }
-.evaluation-top { display: grid; grid-template-columns: 1fr 120px; gap: 8px; }
-.evaluation-criteria { display: grid; gap: 8px; }
-.evaluation-criteria label { display: grid; grid-template-columns: 1fr 90px; align-items: center; gap: 8px; }
-.evaluation-score-line { display: flex; justify-content: space-between; color: #0f172a; font-weight: 600; }
-.evaluation-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+/* Examiner report / campus evaluation form */
+
+.evaluation-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+  padding: 1rem 1.1rem;
+  background: linear-gradient(180deg, #fafbfc 0%, #ffffff 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
+}
+
+.evaluation-top {
+  display: grid;
+  grid-template-columns: 1fr minmax(100px, 120px);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.evaluation-top select {
+  padding: 0.5rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #0f172a;
+  background: #fafafa;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.evaluation-top select:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+}
+
+.evaluation-top input[placeholder='Grade'] {
+  padding: 0.5rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-align: center;
+  color: #3730a3;
+  background: #eef2ff;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.evaluation-top input:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.18);
+}
+
+.evaluation-type-hint {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.82rem;
+  color: #4338ca;
+  line-height: 1.45;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+}
+
+.evaluation-criteria {
+  display: grid;
+  gap: 8px;
+}
+
+.evaluation-criteria label {
+  display: grid;
+  grid-template-columns: 1fr 88px;
+  align-items: center;
+  gap: 12px;
+  padding: 0.5rem 0.65rem;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: #334155;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.evaluation-criteria label:hover {
+  background: #fff;
+  border-color: #e2e8f0;
+}
+
+.evaluation-criteria label span:first-child {
+  line-height: 1.35;
+}
+
+.evaluation-criteria input[type='number'] {
+  padding: 0.4rem 0.45rem;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  background: #fff;
+  color: #0f172a;
+}
+
+.evaluation-criteria input[type='number']:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
+}
+
+.evaluation-score-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0.75rem 0.9rem;
+  margin-top: 4px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #eef2ff 0%, #f8fafc 100%);
+  border: 1px solid #c7d2fe;
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.evaluation-score-line span:last-child {
+  color: #4f46e5;
+  font-size: 0.88rem;
+}
+
+.evaluation-form textarea {
+  min-height: 88px;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #0f172a;
+  resize: vertical;
+  background: #fafafa;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.evaluation-form textarea:hover {
+  background: #fff;
+}
+
+.evaluation-form textarea:focus {
+  outline: none;
+  border-color: #4f46e5;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+.evaluation-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.evaluation-actions .examiner-btn {
+  border-radius: 10px;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.15s ease;
+}
+
+.evaluation-actions .examiner-btn:active {
+  transform: scale(0.98);
+}
+
+@media (max-width: 520px) {
+  .evaluation-top {
+    grid-template-columns: 1fr;
+  }
+
+  .evaluation-criteria label {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .evaluation-criteria input[type='number'] {
+    width: 100%;
+  }
+}

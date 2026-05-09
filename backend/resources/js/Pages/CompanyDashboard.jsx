@@ -11,6 +11,12 @@ import './company/components/CompanyTables.css';
 import './company/components/CompanyKanban.css';
 import './company/components/CompanyModal.css';
 import './company/components/CompanyChat.css';
+import './company/components/CompanyMessages.css';
+import CompanyMessagesPanel from './company/components/CompanyMessagesPanel';
+import CompanySchedulePanel from './company/components/CompanySchedulePanel';
+import './company/components/CompanySchedule.css';
+import CompanyEvaluationPanel from './company/components/CompanyEvaluationPanel';
+import './company/components/CompanyEvaluation.css';
 
 const NAV = [
   { id: 'overview', label: 'Dashboard', icon: '📊' },
@@ -167,17 +173,47 @@ const CompanyDashboard = () => {
     evaluation_date: new Date().toISOString().slice(0, 10),
   });
   const [scheduleDraft, setScheduleDraft] = useState({ application_id: '', scheduled_at: '', notes: '' });
-  const [msgDraft, setMsgDraft] = useState({ student_id: '', body: '' });
+  const [messageFocusStudentId, setMessageFocusStudentId] = useState(null);
   const [aiChat, setAiChat] = useState([
     { role: 'ai', text: 'Company recruitment AI: job posts, screening, interviews, intern performance.' },
   ]);
   const [aiInput, setAiInput] = useState('');
   const [busy, setBusy] = useState('');
+  const [evalHistoryTick, setEvalHistoryTick] = useState(0);
 
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type });
     window.clearTimeout(window.__coToast);
     window.__coToast = window.setTimeout(() => setToast(null), 2600);
+  }, []);
+
+  const clearMessageFocus = useCallback(() => setMessageFocusStudentId(null), []);
+
+  const openMessagesForStudent = useCallback(
+    (studentUserId) => {
+      const sid = Number(studentUserId);
+      if (!Number.isFinite(sid) || sid <= 0) {
+        showToast('Student not available for messaging.', 'error');
+        return;
+      }
+      setMessageFocusStudentId(sid);
+      setActive('messages');
+    },
+    [showToast],
+  );
+
+  const goToScheduleWithApplication = useCallback((applicationId, firstName = 'candidate') => {
+    const id = Number(applicationId);
+    if (!Number.isFinite(id) || id <= 0) return;
+    const dt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    setScheduleDraft((d) => ({
+      ...d,
+      application_id: String(id),
+      scheduled_at: d.scheduled_at || local,
+      notes: d.notes || `Interview / check-in with ${firstName}`,
+    }));
+    setActive('schedule');
   }, []);
 
   const loadCore = useCallback(async () => {
@@ -271,6 +307,29 @@ const CompanyDashboard = () => {
     });
     return buckets;
   }, [applicants]);
+
+  const messageableStudentIds = useMemo(() => {
+    const set = new Set();
+    (applicants || []).forEach((a) => {
+      if (a.student_id) set.add(Number(a.student_id));
+    });
+    (interns || []).forEach((row) => {
+      if (row.student?.id) set.add(Number(row.student.id));
+    });
+    return set;
+  }, [applicants, interns]);
+
+  const tryOpenMessagesFromFind = useCallback(
+    (studentUserId) => {
+      const sid = Number(studentUserId);
+      if (!messageableStudentIds.has(sid)) {
+        showToast('You can only message students who applied to you or are active interns.', 'info');
+        return;
+      }
+      openMessagesForStudent(sid);
+    },
+    [messageableStudentIds, openMessagesForStudent, showToast],
+  );
 
   const openApplicant = async (id) => {
     setBusy('app');
@@ -435,7 +494,7 @@ const CompanyDashboard = () => {
 
   const submitEvaluation = async () => {
     const sid = Number(evalDraft.student_id);
-    if (!sid) return showToast('Enter a valid student user ID.', 'error');
+    if (!sid) return showToast('Select an intern to evaluate.', 'error');
     try {
       await companyAPI.evaluateIntern(sid, {
         type: evalDraft.type,
@@ -450,6 +509,8 @@ const CompanyDashboard = () => {
         evaluation_date: evalDraft.evaluation_date,
       });
       showToast('Evaluation saved');
+      setEvalHistoryTick((n) => n + 1);
+      await loadCore();
     } catch (e) {
       showToast(e?.response?.data?.error || 'Evaluation failed.', 'error');
     }
@@ -461,45 +522,6 @@ const CompanyDashboard = () => {
       setEvalDraft((d) => ({ ...d, strengths: r.data?.draft || d.strengths }));
     } catch (e) {
       showToast(e?.response?.data?.error || 'AI draft failed.', 'error');
-    }
-  };
-
-  const sendMessageToStudent = async () => {
-    const sid = Number(msgDraft.student_id);
-    if (!sid || !msgDraft.body.trim()) return showToast('Enter student ID and message.', 'error');
-    try {
-      await companyAPI.sendMessage({ student_id: sid, body: msgDraft.body });
-      showToast('Sent');
-      setMsgDraft((d) => ({ ...d, body: '' }));
-      const res = await companyAPI.getMessages({});
-      setMessages(normalizePaginated(res).data);
-    } catch (e) {
-      showToast(e?.response?.data?.error || 'Send failed.', 'error');
-    }
-  };
-
-  const aiSuggestReply = async () => {
-    try {
-      const r = await aiCompanyAPI.suggestReply({});
-      setMsgDraft((d) => ({ ...d, body: r.data?.suggested_reply || d.body }));
-    } catch (e) {
-      showToast(e?.response?.data?.error || 'AI suggestion failed.', 'error');
-    }
-  };
-
-  const saveInterview = async () => {
-    const applicationId = Number(scheduleDraft.application_id);
-    if (!applicationId || !scheduleDraft.scheduled_at) return showToast('Application ID and date/time are required.', 'error');
-    try {
-      await companyAPI.createSchedule({
-        application_id: applicationId,
-        scheduled_at: scheduleDraft.scheduled_at,
-        notes: scheduleDraft.notes,
-      });
-      showToast('Scheduled');
-      setScheduleDraft((d) => ({ ...d, notes: '' }));
-    } catch (e) {
-      showToast(e?.response?.data?.error || 'Scheduling failed.', 'error');
     }
   };
 
@@ -851,6 +873,17 @@ const CompanyDashboard = () => {
                   </div>
                   <div style={{display:'flex',gap:4,marginTop:8,flexWrap:'wrap'}}>
                     <button className="co-btn ghost co-btn-sm" onClick={()=>openApplicant(a.id)}>Details</button>
+                    <button
+                      type="button"
+                      className="co-btn ghost co-btn-sm"
+                      onClick={() => openMessagesForStudent(a.student_id)}
+                      disabled={!a.student_id}
+                    >
+                      💬 Message
+                    </button>
+                    <button type="button" className="co-btn ghost co-btn-sm" onClick={() => goToScheduleWithApplication(a.id, a.first_name)}>
+                      📅 Schedule
+                    </button>
                     {a.status !== 'approved' && (
                       <button className="co-btn co-btn-sm" style={{background:'#10b981',color:'white',border:'none',fontSize:'0.7rem',padding:'4px 8px'}}
                         onClick={()=>setDecisionModal({ type: 'approve', applicantId: a.id })}>
@@ -884,6 +917,17 @@ const CompanyDashboard = () => {
                   <td>
                     <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
                       <button className="co-btn ghost co-btn-sm" onClick={()=>openApplicant(a.id)}>Open</button>
+                      <button
+                        type="button"
+                        className="co-btn ghost co-btn-sm"
+                        onClick={() => openMessagesForStudent(a.student_id)}
+                        disabled={!a.student_id}
+                      >
+                        💬
+                      </button>
+                      <button type="button" className="co-btn ghost co-btn-sm" onClick={() => goToScheduleWithApplication(a.id, a.first_name)} title="Schedule">
+                        📅
+                      </button>
                       {a.status!=='approved'&&<button className="co-btn co-btn-sm" style={{background:'#10b981',color:'white',border:'none'}} onClick={()=>setDecisionModal({ type: 'approve', applicantId: a.id })}>✅</button>}
                       {a.status!=='rejected'&&<button className="co-btn ghost co-btn-sm" style={{color:'#ef4444'}} onClick={()=>setDecisionModal({ type: 'reject', applicantId: a.id, reason: '' })}>❌</button>}
                     </div>
@@ -900,8 +944,53 @@ const CompanyDashboard = () => {
 
   const renderFind = () => (
     <div className="co-grid">
-      <div className="co-card"><h3>🔍 Find Candidates</h3><input placeholder="Search skills, names, interests..." value={findQuery} onChange={(e)=>setFindQuery(e.target.value)} style={{width:'100%',maxWidth:420,padding:10,borderRadius:10,border:'1px solid #e5e7eb'}}/><div style={{marginTop:12}}><button className="co-btn co-btn-sm" disabled={busy==='find'} onClick={runFindSearch}>AI smart search</button></div></div>
-      <div className="co-card"><h4>Results</h4><ul>{findResults.map((s)=>(<li key={s.id}>{s.name} · {s.department} · match {s.ai_match}<button className="co-btn ghost co-btn-sm" onClick={()=>saveToTalentPool(s.id)}>Save</button></li>))}</ul></div>
+      <div className="co-card">
+        <h3>🔍 Find Candidates</h3>
+        <input
+          placeholder="Search skills, names, interests..."
+          value={findQuery}
+          onChange={(e) => setFindQuery(e.target.value)}
+          style={{ width: '100%', maxWidth: 420, padding: 10, borderRadius: 10, border: '1px solid #e5e7eb' }}
+        />
+        <div style={{ marginTop: 12 }}>
+          <button className="co-btn co-btn-sm" disabled={busy === 'find'} onClick={runFindSearch}>
+            AI smart search
+          </button>
+        </div>
+      </div>
+      <div className="co-card">
+        <h4>Results</h4>
+        <p className="co-muted" style={{ fontSize: '0.85rem', marginTop: 0 }}>
+          Message is available when the student already applied or is an active intern (same rules as the inbox).
+        </p>
+        <ul className="co-find-results">
+          {findResults.map((s) => {
+            const sid = Number(s.id);
+            const canMsg = messageableStudentIds.has(sid);
+            return (
+              <li key={s.id} className="co-find-result-row">
+                <span>
+                  {s.name} · {s.department} · match {s.ai_match}
+                </span>
+                <span className="co-find-result-actions">
+                  <button type="button" className="co-btn ghost co-btn-sm" onClick={() => saveToTalentPool(s.id)}>
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    className="co-btn ghost co-btn-sm"
+                    onClick={() => tryOpenMessagesFromFind(s.id)}
+                    disabled={!canMsg}
+                    title={canMsg ? 'Open messages' : 'Student must apply or intern with you first'}
+                  >
+                    💬 Message
+                  </button>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </div>
   );
 
@@ -972,27 +1061,14 @@ const CompanyDashboard = () => {
                       <button
                         className="co-btn ghost co-btn-sm"
                         type="button"
-                        onClick={() => {
-                          setMsgDraft((d) => ({ ...d, student_id: String(row.student?.id || ''), body: d.body || '' }));
-                          setActive('messages');
-                        }}
+                        onClick={() => openMessagesForStudent(row.student?.id)}
                       >
                         Message
                       </button>
                       <button
                         className="co-btn ghost co-btn-sm"
                         type="button"
-                        onClick={() => {
-                          const dt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-                          const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-                          setScheduleDraft((d) => ({
-                            ...d,
-                            application_id: String(row.application_id),
-                            scheduled_at: d.scheduled_at || local,
-                            notes: d.notes || `Interview / check-in with ${row.student?.first_name || 'intern'}`,
-                          }));
-                          setActive('schedule');
-                        }}
+                        onClick={() => goToScheduleWithApplication(row.application_id, row.student?.first_name || 'intern')}
                       >
                         Request interview
                       </button>
@@ -1149,36 +1225,47 @@ const CompanyDashboard = () => {
   );
 
   const renderEvaluations = () => (
-    <div className="co-card">
-      <h3>📊 Intern Evaluations</h3>
-      <div className="co-form-grid"><label>Student user ID<input value={evalDraft.student_id} onChange={(e)=>setEvalDraft((d)=>({...d,student_id:e.target.value}))}/></label><label>Type<select value={evalDraft.type} onChange={(e)=>setEvalDraft((d)=>({...d,type:e.target.value}))}><option value="midterm">Mid-term</option><option value="final">Final</option></select></label></div>
-      <p className="co-muted">Ratings 0–100 per criterion.</p>
-      <div className="co-form-grid">{['technical_skills','communication_skills','problem_solving','teamwork','time_management'].map((k)=>(<label key={k}>{k.replace(/_/g,' ')}<input type="number" value={evalDraft[k]} onChange={(e)=>setEvalDraft((d)=>({...d,[k]:Number(e.target.value)}))}/></label>))}</div>
-      <label>Narrative strengths<textarea value={evalDraft.strengths} onChange={(e)=>setEvalDraft((d)=>({...d,strengths:e.target.value}))}/></label>
-      <div style={{marginTop:12,display:'flex',gap:8}}>
-        <button className="co-btn co-btn-sm" onClick={submitEvaluation}>Submit evaluation</button>
-        <button className="co-btn ghost co-btn-sm" onClick={aiDraftEvaluation}>AI draft</button>
+    <div className="co-card co-eval-page-wrap">
+      <div style={{ marginBottom: 12 }}>
+        <h3 style={{ margin: 0 }}>📊 Intern evaluations</h3>
+        <p className="co-muted" style={{ marginTop: 8, marginBottom: 0 }}>
+          Submit both mid-internship and final reviews for each placement; the system averages them for the composite grade together with the examiner campus assessment.
+        </p>
       </div>
+      <CompanyEvaluationPanel
+        interns={interns}
+        evalDraft={evalDraft}
+        setEvalDraft={setEvalDraft}
+        onSubmit={submitEvaluation}
+        onAiDraft={aiDraftEvaluation}
+        evalHistoryTick={evalHistoryTick}
+      />
     </div>
   );
 
   const renderMessages = () => (
-    <div className="co-card">
-      <h3>💬 Messages</h3>
-      <div className="co-form-grid"><label>Student user ID<input value={msgDraft.student_id} onChange={(e)=>setMsgDraft((d)=>({...d,student_id:e.target.value}))}/></label></div>
-      <textarea rows={4} value={msgDraft.body} onChange={(e)=>setMsgDraft((d)=>({...d,body:e.target.value}))} placeholder="Type your message..."/>
-      <div style={{marginTop:8,display:'flex',gap:8}}><button className="co-btn co-btn-sm" onClick={sendMessageToStudent}>Send</button><button className="co-btn ghost co-btn-sm" onClick={aiSuggestReply}>AI suggest reply</button></div>
-      <h4>Inbox</h4><ul>{messages.slice(0,20).map((m)=>(<li key={m.id}>{m.subject}: {m.body?.slice(0,80)}</li>))}</ul>
-    </div>
+    <CompanyMessagesPanel
+      messages={messages}
+      applicants={applicants}
+      interns={interns}
+      profile={profile}
+      showToast={showToast}
+      onRefresh={(next) => setMessages(next)}
+      userEmail={auth?.email}
+      focusStudentId={messageFocusStudentId}
+      onFocusStudentConsumed={clearMessageFocus}
+    />
   );
 
   const renderSchedule = () => (
-    <div className="co-card">
-      <h3>📅 Schedule</h3>
-      <div className="co-form-grid"><label>Application ID<input value={scheduleDraft.application_id} onChange={(e)=>setScheduleDraft((d)=>({...d,application_id:e.target.value}))}/></label><label>When<input type="datetime-local" value={scheduleDraft.scheduled_at} onChange={(e)=>setScheduleDraft((d)=>({...d,scheduled_at:e.target.value}))}/></label></div>
-      <textarea placeholder="Notes" value={scheduleDraft.notes} onChange={(e)=>setScheduleDraft((d)=>({...d,notes:e.target.value}))}/>
-      <button className="co-btn co-btn-sm" style={{marginTop:10}} onClick={saveInterview}>Save interview</button>
-    </div>
+    <CompanySchedulePanel
+      applicants={applicants}
+      interns={interns}
+      scheduleDraft={scheduleDraft}
+      setScheduleDraft={setScheduleDraft}
+      showToast={showToast}
+      onScheduled={loadCore}
+    />
   );
 
   const renderAnalytics = () => (
@@ -1302,6 +1389,23 @@ const CompanyDashboard = () => {
             <h4>Interview questions</h4>
             <ul>{(selectedApplicant.ai_insights?.interview_questions || []).map((q, i) => (<li key={i}>{q}</li>))}</ul>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+              <button
+                type="button"
+                className="co-btn ghost co-btn-sm"
+                onClick={() => {
+                  const sid = selectedApplicant.application?.student_id ?? selectedApplicant.application?.student?.id;
+                  const n = Number(sid);
+                  if (!Number.isFinite(n) || n <= 0) {
+                    showToast('Student not available for messaging.', 'error');
+                    return;
+                  }
+                  setSelectedApplicant(null);
+                  setMessageFocusStudentId(n);
+                  setActive('messages');
+                }}
+              >
+                💬 Message
+              </button>
               <button
                 className="co-btn co-btn-sm"
                 onClick={() =>

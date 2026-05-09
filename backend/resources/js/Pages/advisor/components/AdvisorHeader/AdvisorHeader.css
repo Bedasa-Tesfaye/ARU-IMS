@@ -1,6 +1,4 @@
-/* ============================================ */
-/* ADVISOR HEADER - TOPBAR                      */
-/* ============================================ */
+/* Advisor sticky top bar */
 
 .adv-shell {
   display: flex;
@@ -12,31 +10,46 @@
 .adv-topbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 20px;
-  background: #fff;
-  border-bottom: 1px solid #e2e8f0;
+  gap: 14px;
+  padding: 14px 24px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
   position: sticky;
   top: 0;
   z-index: 20;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 4px 24px rgba(15, 23, 42, 0.04);
 }
 
 .adv-title {
   margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: 1.28rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
   color: #0f172a;
   flex: 1;
+  line-height: 1.25;
 }
 
 .adv-burger {
   display: none;
   border: 0;
-  background: #f1f5f9;
-  border-radius: 10px;
-  padding: 8px 12px;
-  font-size: 1.2rem;
+  background: linear-gradient(135deg, #f0fdfa, #ccfbf1);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 1.25rem;
   cursor: pointer;
+  color: #0f766e;
+  box-shadow: 0 1px 3px rgba(13, 148, 136, 0.15);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.adv-burger:hover {
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.2);
+}
+
+.adv-burger:active {
+  transform: scale(0.96);
 }
 
 .adv-top-actions {
@@ -45,33 +58,42 @@
 
 .adv-notify-btn {
   border: 0;
-  background: #f1f5f9;
+  background: #f8fafc;
   border-radius: 12px;
-  padding: 8px 12px;
+  padding: 10px 14px;
   cursor: pointer;
   position: relative;
+  border: 1px solid #e2e8f0;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.adv-notify-btn:hover {
+  background: #fff;
+  border-color: #cbd5e1;
 }
 
 .adv-notify-dot {
   position: absolute;
-  top: 6px;
-  right: 8px;
+  top: 8px;
+  right: 10px;
   width: 8px;
   height: 8px;
   background: #ef4444;
   border-radius: 50%;
+  box-shadow: 0 0 0 2px #fff;
 }
 
 .adv-notify-panel {
   position: absolute;
   right: 0;
-  top: 110%;
-  width: min(340px, 92vw);
+  top: calc(100% + 8px);
+  width: min(360px, 92vw);
   background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.12);
-  padding: 14px;
+  border-radius: 16px;
+  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.14);
+  padding: 16px;
   z-index: 40;
+  border: 1px solid #e2e8f0;
 }
 
 .adv-notify-panel ul {
@@ -81,11 +103,15 @@
 }
 
 .adv-notify-panel li {
-  padding: 10px 0;
+  padding: 12px 0;
   border-bottom: 1px solid #f1f5f9;
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.adv-notify-panel li:last-child {
+  border-bottom: 0;
 }
 
 .adv-notify-panel span {
@@ -96,5 +122,9 @@
 @media (max-width: 960px) {
   .adv-burger {
     display: inline-block;
+  }
+
+  .adv-topbar {
+    padding: 12px 16px;
   }
 }

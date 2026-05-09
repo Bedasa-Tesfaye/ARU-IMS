@@ -1,0 +1,415 @@
+/* Internship composite grades — Super Admin */
+
+.ig-panel {
+  --ig-bg: #f8fafc;
+  --ig-surface: #ffffff;
+  --ig-border: #e2e8f0;
+  --ig-text: #0f172a;
+  --ig-muted: #64748b;
+  --ig-accent: #4f46e5;
+  --ig-accent-soft: #eef2ff;
+  --ig-success: #059669;
+  --ig-success-bg: #ecfdf5;
+  --ig-warn: #c2410c;
+  --ig-warn-bg: #fff7ed;
+  --ig-radius: 14px;
+  --ig-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.04);
+  --ig-shadow-lg: 0 4px 6px rgba(15, 23, 42, 0.05), 0 12px 40px rgba(79, 70, 229, 0.08);
+
+  padding: 0.5rem 0 2.5rem;
+  max-width: 1220px;
+  margin: 0 auto;
+}
+
+.ig-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+  padding: 1.5rem 1.75rem;
+  background: linear-gradient(135deg, var(--ig-surface) 0%, #f8faff 48%, var(--ig-accent-soft) 100%);
+  border: 1px solid var(--ig-border);
+  border-radius: var(--ig-radius);
+  box-shadow: var(--ig-shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.ig-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--ig-accent), #818cf8);
+  border-radius: 4px 0 0 4px;
+}
+
+.ig-header > div:first-child {
+  position: relative;
+  z-index: 1;
+  padding-left: 0.35rem;
+}
+
+.ig-header h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ig-text);
+  line-height: 1.25;
+}
+
+.ig-sub {
+  margin: 0;
+  color: #475569;
+  font-size: 0.94rem;
+  line-height: 1.6;
+  max-width: 700px;
+}
+
+.ig-sub strong {
+  color: #334155;
+  font-weight: 600;
+}
+
+.ig-weights {
+  margin: 0.85rem 0 0;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.8125rem;
+  color: #4338ca;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  display: inline-block;
+  line-height: 1.45;
+  box-shadow: 0 1px 2px rgba(67, 56, 202, 0.06);
+}
+
+.ig-header .sa-btn-secondary {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  padding: 0.55rem 1.1rem;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid #c7d2fe;
+  background: var(--ig-surface);
+  color: var(--ig-accent);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.ig-header .sa-btn-secondary:hover:not(:disabled) {
+  background: var(--ig-accent-soft);
+  border-color: #a5b4fc;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.12);
+}
+
+.ig-header .sa-btn-secondary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.ig-header .sa-btn-secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ig-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: flex-end;
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.25rem;
+  background: var(--ig-surface);
+  border: 1px solid var(--ig-border);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.ig-search span {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.35rem;
+  color: #475569;
+}
+
+.ig-search input {
+  min-width: min(100%, 300px);
+  padding: 0.6rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  font-size: 0.9rem;
+  color: var(--ig-text);
+  background: #fafafa;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.ig-search input:hover {
+  border-color: #94a3b8;
+  background: var(--ig-surface);
+}
+
+.ig-search input:focus {
+  outline: none;
+  border-color: var(--ig-accent);
+  background: var(--ig-surface);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.18);
+}
+
+.ig-search input::placeholder {
+  color: #94a3b8;
+}
+
+.ig-check {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  padding: 0.45rem 0.65rem;
+  border-radius: 10px;
+  transition: background 0.15s ease;
+}
+
+.ig-check:hover {
+  background: #f1f5f9;
+}
+
+.ig-check input[type='checkbox'] {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--ig-accent);
+  cursor: pointer;
+}
+
+.ig-loading {
+  padding: 3rem 2rem;
+  text-align: center;
+  color: var(--ig-muted);
+  font-size: 0.95rem;
+  font-weight: 500;
+  background: var(--ig-surface);
+  border: 1px dashed var(--ig-border);
+  border-radius: 12px;
+  animation: ig-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes ig-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.65;
+  }
+}
+
+.ig-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--ig-border);
+  border-radius: var(--ig-radius);
+  background: var(--ig-surface);
+  box-shadow: var(--ig-shadow-lg);
+  -webkit-overflow-scrolling: touch;
+}
+
+.ig-table-wrap::-webkit-scrollbar {
+  height: 8px;
+}
+
+.ig-table-wrap::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.ig-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.ig-table th,
+.ig-table td {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: top;
+}
+
+.ig-table tbody tr {
+  transition: background 0.12s ease;
+}
+
+.ig-table tbody tr:hover {
+  background: #fafbfc;
+}
+
+.ig-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ig-table th {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #64748b;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  box-shadow: 0 1px 0 #e2e8f0;
+}
+
+.ig-table td:first-child {
+  font-variant-numeric: tabular-nums;
+}
+
+.ig-student strong {
+  font-weight: 600;
+  color: var(--ig-text);
+}
+
+.ig-student,
+.ig-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.ig-stack strong {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.ig-muted {
+  font-size: 0.8rem;
+  color: var(--ig-muted);
+  line-height: 1.35;
+}
+
+.ig-combined {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.ig-combined strong {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ig-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.ig-grade-pill {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.28rem 0.55rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #e0e7ff, #eef2ff);
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+  letter-spacing: 0.02em;
+}
+
+.ig-ready {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  display: inline-block;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+
+.ig-ready-complete {
+  background: var(--ig-success-bg);
+  color: var(--ig-success);
+  border-color: #a7f3d0;
+}
+
+.ig-ready-warn {
+  background: var(--ig-warn-bg);
+  color: var(--ig-warn);
+  border-color: #fed7aa;
+}
+
+.ig-ready-muted {
+  background: #f1f5f9;
+  color: #475569;
+  border-color: #e2e8f0;
+}
+
+.ig-empty {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.95rem;
+  font-weight: 500;
+  background: linear-gradient(180deg, #fafbfc, #f8fafc);
+}
+
+.ig-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+  padding: 0.75rem;
+}
+
+.ig-pager .sa-btn-secondary {
+  min-width: 6.5rem;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: var(--ig-surface);
+  color: #334155;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ig-pager .sa-btn-secondary:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+}
+
+.ig-pager .sa-btn-secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ig-pager .ig-muted {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .ig-header {
+    flex-direction: column;
+    padding: 1.25rem 1.15rem;
+  }
+
+  .ig-header .sa-btn-secondary {
+    width: 100%;
+  }
+
+  .ig-table th,
+  .ig-table td {
+    padding: 0.65rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+}

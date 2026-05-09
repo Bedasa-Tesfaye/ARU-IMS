@@ -1,0 +1,209 @@
+/* Company — schedule interview / check-in */
+
+.co-schedule-layout {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  align-items: start;
+}
+
+.co-schedule-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 10px 36px rgba(15, 23, 42, 0.07);
+}
+
+.co-schedule-head h3 {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+}
+
+.co-schedule-lead {
+  margin: 0 0 16px;
+  line-height: 1.45;
+  font-size: 0.88rem;
+}
+
+.co-schedule-label {
+  display: grid;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.co-schedule-label--full {
+  grid-column: 1 / -1;
+}
+
+.co-schedule-label input[type='datetime-local'],
+.co-schedule-label textarea {
+  font: inherit;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  font-weight: 500;
+}
+
+.co-schedule-label textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.co-schedule-label input:focus,
+.co-schedule-label textarea:focus,
+.co-schedule-search:focus {
+  outline: none;
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.35);
+}
+
+.co-schedule-search {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  font: inherit;
+  margin-top: 4px;
+}
+
+.co-schedule-pick-list {
+  margin-top: 14px;
+  max-height: min(380px, 52vh);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 4px;
+}
+
+.co-schedule-pick {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.co-schedule-pick:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+.co-schedule-pick.active {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #eff6ff 0%, #eef2ff 100%);
+  box-shadow: 0 4px 18px rgba(59, 130, 246, 0.12);
+}
+
+.co-schedule-pick-av {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  background: linear-gradient(135deg, #bfdbfe, #ddd6fe);
+  color: #3730a3;
+}
+
+.co-schedule-pick-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.co-schedule-pick-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.co-schedule-pick-row strong {
+  font-size: 0.95rem;
+}
+
+.co-schedule-pill {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.co-schedule-pill--applicant {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.co-schedule-pill--intern {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.co-schedule-pick-meta {
+  font-size: 0.76rem;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.co-schedule-pick-role {
+  font-size: 0.8rem;
+  color: #475569;
+  line-height: 1.35;
+}
+
+.co-schedule-selected {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  font-size: 0.88rem;
+}
+
+.co-schedule-details h4 {
+  margin: 0 0 14px;
+  font-size: 1.02rem;
+}
+
+.co-schedule-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr;
+}
+
+.co-schedule-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.co-schedule-empty {
+  padding: 24px;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.9rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+}
+
+@media (max-width: 960px) {
+  .co-schedule-layout {
+    grid-template-columns: 1fr;
+  }
+}

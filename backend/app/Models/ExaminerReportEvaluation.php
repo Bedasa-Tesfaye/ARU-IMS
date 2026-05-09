@@ -17,6 +17,8 @@ class ExaminerReportEvaluation extends Model
         'status',
         'technical_score',
         'documentation_score',
+        'methodology_score',
+        'learning_score',
         'presentation_score',
         'overall_score',
         'grade',

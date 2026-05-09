@@ -145,6 +145,8 @@ class ExaminerController extends Controller
             'report_type' => 'required|string|max:40',
             'technical_score' => 'nullable|integer|min:0|max:100',
             'documentation_score' => 'nullable|integer|min:0|max:100',
+            'methodology_score' => 'nullable|integer|min:0|max:100',
+            'learning_score' => 'nullable|integer|min:0|max:100',
             'presentation_score' => 'nullable|integer|min:0|max:100',
             'overall_score' => 'nullable|integer|min:0|max:100',
             'grade' => 'nullable|string|max:10',
@@ -154,7 +156,19 @@ class ExaminerController extends Controller
         ])->validate();
 
         $item = ExaminerReportEvaluation::query()->create([
-            ...$validated,
+            'student_id' => $validated['student_id'],
+            'application_id' => $validated['application_id'] ?? null,
+            'report_type' => $validated['report_type'],
+            'technical_score' => $validated['technical_score'] ?? null,
+            'documentation_score' => $validated['documentation_score'] ?? null,
+            'methodology_score' => $validated['methodology_score'] ?? null,
+            'learning_score' => $validated['learning_score'] ?? null,
+            'presentation_score' => $validated['presentation_score'] ?? null,
+            'overall_score' => $validated['overall_score'] ?? null,
+            'grade' => $validated['grade'] ?? null,
+            'strengths' => $validated['strengths'] ?? null,
+            'improvements' => $validated['improvements'] ?? null,
+            'comments' => $validated['comments'] ?? null,
             'examiner_id' => $examiner->id,
             'status' => 'evaluated',
             'evaluated_at' => now(),
@@ -170,6 +184,8 @@ class ExaminerController extends Controller
         $item->update($request->only([
             'technical_score',
             'documentation_score',
+            'methodology_score',
+            'learning_score',
             'presentation_score',
             'overall_score',
             'grade',

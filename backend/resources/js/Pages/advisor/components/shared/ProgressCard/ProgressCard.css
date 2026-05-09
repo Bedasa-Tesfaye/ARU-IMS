@@ -1,46 +1,61 @@
-/* ============================================ */
-/* PROGRESS CARD - KPI AND GAUGE                */
-/* ============================================ */
+/* KPI stat tiles and engagement gauge */
 
 .adv-stat {
   border-left: 4px solid #14b8a6;
-  background: #fff;
-  border-radius: 12px;
-  padding: 12px;
+  background: linear-gradient(135deg, #ffffff, #fafdfd);
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid #e2e8f0;
+  border-left-width: 4px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 
 .adv-stat strong {
   display: block;
-  font-size: 22px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  line-height: 1.15;
+}
+
+.adv-stat span {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #64748b;
 }
 
 .adv-stat-animated small {
   display: block;
-  font-size: 0.7rem;
-  color: #64748b;
-  margin-top: 4px;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 6px;
+  font-weight: 500;
 }
 
 .adv-gauge {
   margin-left: auto;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: conic-gradient(#14b8a6 var(--pct), #e2e8f0 0);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 800;
   color: #134e4a;
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.2);
 }
 
 .adv-gauge span {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }

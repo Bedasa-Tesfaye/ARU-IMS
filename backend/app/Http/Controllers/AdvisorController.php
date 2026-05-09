@@ -599,7 +599,7 @@ class AdvisorController extends Controller
             'subject' => $validated['subject'] ?? 'Advisor message',
             'from_name' => trim(($advisor->first_name ?? '') . ' ' . ($advisor->last_name ?? '')),
             'from_email' => $advisor->email,
-            'category' => 'advisor',
+            'category' => 'general',
             'sentiment' => 'neutral',
             'body' => $validated['body'],
         ]);

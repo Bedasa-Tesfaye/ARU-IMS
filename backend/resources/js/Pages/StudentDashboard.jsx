@@ -2003,6 +2003,9 @@ const StudentDashboard = () => {
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [messagesDraftPrefill]);
 
+    const studentUserId = profile?.id;
+    const myEmail = (profile?.email || '').toLowerCase();
+
     const threads = useMemo(() => {
       const by = new Map();
       (messages || []).forEach((m) => {
@@ -2010,58 +2013,81 @@ const StudentDashboard = () => {
         if (!by.has(key)) by.set(key, []);
         by.get(key).push(m);
       });
-      const items = Array.from(by.entries()).map(([key, arr]) => ({
-        key,
-        last: arr[0],
-        unread: arr.some((x) => !x.read_at),
-        count: arr.length,
-      }));
+      const items = Array.from(by.entries()).map(([key, arr]) => {
+        const sorted = arr.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        return {
+          key,
+          last: sorted[0],
+          unread: arr.some((x) => {
+            if (x.read_at) return false;
+            if (myEmail && (x.from_email || '').toLowerCase() === myEmail) return false;
+            return x.from_name !== studentName;
+          }),
+          count: arr.length,
+        };
+      });
       items.sort((a, b) => new Date(b.last.created_at).getTime() - new Date(a.last.created_at).getTime());
       return items;
-    }, [messages]);
+    }, [messages, myEmail, studentName]);
 
     const contacts = useMemo(() => {
       const list = [];
-
-      // Assigned staff (advisor/examiner)
-      assignedCards.forEach((c) => {
-        const key = `staff-${String(c.role || '').toLowerCase()}`;
+      const staff = data?.assigned_staff || {};
+      const advisor = staff.advisor;
+      if (advisor?.id) {
         list.push({
-          key,
-          name: c.name,
-          subtitle: c.role,
+          key: `advisor-${advisor.id}`,
+          name: `${advisor.first_name || ''} ${advisor.last_name || ''}`.trim() || 'Advisor',
+          subtitle: 'Academic advisor',
+          kind: 'advisor',
         });
-      });
+      }
 
-      // Companies from applications
-      derivedApplications.forEach((a) => {
-        const companyId = a.internship?.company?.id || a.internship?.company_id;
-        const companyName = a.internship?.company?.name;
-        if (!companyId) return;
-        list.push({
-          key: `company-${companyId}`,
-          name: companyName || `Company ${companyId}`,
-          subtitle: 'Company HR',
+      if (studentUserId) {
+        derivedApplications.forEach((a) => {
+          const companyId = a.internship?.company?.id || a.internship?.company_id;
+          const companyName = a.internship?.company?.name;
+          if (!companyId) return;
+          list.push({
+            key: `company-${companyId}-${studentUserId}`,
+            name: companyName || `Company ${companyId}`,
+            subtitle: 'Employer · application thread',
+            kind: 'company',
+          });
         });
-      });
+      }
 
-      // Any other existing threads
       threads.forEach((t) => {
         if (!list.some((x) => x.key === t.key)) {
-          list.push({ key: t.key, name: t.last.subject || t.key, subtitle: t.last.from_name || 'Contact' });
+          let kind = 'direct';
+          if (String(t.key).startsWith('advisor-')) kind = 'advisor';
+          else if (String(t.key).startsWith('company-')) kind = 'company';
+          list.push({
+            key: t.key,
+            name: (t.last.subject && t.last.subject !== t.key ? t.last.subject : null) || t.key,
+            subtitle: t.last.from_name || 'Conversation',
+            kind,
+          });
         }
       });
 
-      // Deduplicate
       const seen = new Set();
       return list.filter((c) => {
         if (seen.has(c.key)) return false;
         seen.add(c.key);
         return true;
       });
-    }, [assignedCards, derivedApplications, threads]);
+    }, [data?.assigned_staff, derivedApplications, threads, studentUserId]);
 
     const activeKey = threadKey || messagesThreadKey || contacts[0]?.key || threads[0]?.key || 'general';
+
+    const activeContact = useMemo(() => contacts.find((c) => c.key === activeKey), [contacts, activeKey]);
+    const isCompanyThread = activeKey.startsWith('company-');
+
+    const isMyMessage = (m) => {
+      if (myEmail && (m.from_email || '').toLowerCase() === myEmail) return true;
+      return m.from_name === studentName;
+    };
 
     const current = useMemo(
       () => (messages || []).filter((m) => (m.thread_key || 'general') === activeKey).slice().reverse(),
@@ -2101,7 +2127,7 @@ const StudentDashboard = () => {
           <div className="st-card-head">
             <h3>Contacts</h3>
           </div>
-          <input placeholder="Search threads…" value={prompt} onChange={(e) => setPrompt(e.target.value)} />
+          <input className="st-chat-search" placeholder="Search threads…" value={prompt} onChange={(e) => setPrompt(e.target.value)} />
           <div className="st-chat-threads">
             {contacts
               .filter((c) => !prompt || c.name.toLowerCase().includes(prompt.toLowerCase()) || c.subtitle.toLowerCase().includes(prompt.toLowerCase()))
@@ -2109,18 +2135,33 @@ const StudentDashboard = () => {
                 const last = lastByThread.get(c.key);
                 const isOnline = last?.created_at ? Date.now() - new Date(last.created_at).getTime() < 10 * 60 * 1000 : false;
                 const unread = threads.find((t) => t.key === c.key)?.unread;
+                const initials = String(c.name || '?')
+                  .split(/\s+/)
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((p) => p[0]?.toUpperCase())
+                  .join('');
                 return (
                   <button
                     key={c.key}
-                    className={`st-thread ${activeKey === c.key ? 'active' : ''}`}
+                    type="button"
+                    className={`st-thread st-thread--${c.kind || 'direct'} ${activeKey === c.key ? 'active' : ''}`}
                     onClick={() => {
                       setThreadKey(c.key);
                       setMessagesThreadKey(c.key);
                     }}
                   >
-                    <div>
+                    <span className="st-thread-avatar" aria-hidden>
+                      {initials}
+                    </span>
+                    <div className="st-thread-body">
                       <div className="st-contact-row">
                         <strong>{c.name}</strong>
+                        {(c.kind === 'company' || c.kind === 'advisor') && (
+                          <span className={`st-thread-badge st-thread-badge--${c.kind}`}>
+                            {c.kind === 'company' ? 'Company' : 'Advisor'}
+                          </span>
+                        )}
                         <span className={`st-online ${isOnline ? 'on' : 'off'}`} title={isOnline ? 'Online' : 'Offline'} />
                       </div>
                       <div className="st-muted st-small">{c.subtitle}</div>
@@ -2134,12 +2175,22 @@ const StudentDashboard = () => {
         </section>
 
         <section className="st-card st-chat-mid">
-          <div className="st-card-head">
-            <h3>Chat</h3>
+          <div className="st-card-head st-chat-toolbar">
+            <div>
+              <h3>{activeContact?.name || 'Messages'}</h3>
+              <div className="st-muted st-small">{activeContact?.subtitle || 'Select a contact to start'}</div>
+              {isCompanyThread && (
+                <div className="st-msg-context-hint">
+                  This thread is tied to an employer you applied to. Keep messages professional; they may relate to interviews or
+                  next steps.
+                </div>
+              )}
+            </div>
             <button
+              type="button"
               className="st-btn secondary"
               onClick={async () => {
-                const unread = current.filter((m) => !m.read_at);
+                const unread = current.filter((m) => !m.read_at && !isMyMessage(m));
                 for (const m of unread) {
                   // eslint-disable-next-line no-await-in-loop
                   await studentAPI.markMessageRead(m.id);
@@ -2156,9 +2207,12 @@ const StudentDashboard = () => {
           <div className="st-chat-window">
             {current.length ? (
               current.map((m) => (
-                <div key={m.id} className={`st-msg ${m.from_name === studentName ? 'me' : ''}`}>
+                <div key={m.id} className={`st-msg ${isMyMessage(m) ? 'me' : 'them'}`}>
                   <div className="st-msg-bubble">
-                    <strong>{m.from_name}</strong>
+                    <div className="st-msg-meta">
+                      <strong>{m.from_name}</strong>
+                      {m.subject && m.subject !== activeKey && <span className="st-msg-subject">{m.subject}</span>}
+                    </div>
                     <div className="st-muted st-small">{fmtDateTime(m.created_at)}</div>
                     <div className="st-msg-body">{m.body}</div>
                     {(m.attachment_url || m.attachment_name) && (
@@ -2186,16 +2240,28 @@ const StudentDashboard = () => {
           </div>
 
           <div className="st-chat-compose">
-            <textarea className="st-textarea" placeholder="Type a message…" value={draft} onChange={(e) => setDraft(e.target.value)} />
+            <textarea
+              className="st-textarea"
+              placeholder={isCompanyThread ? 'Message the employer (e.g. availability, thank-you, question)…' : 'Type a message…'}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+            />
             <div className="st-actions-inline">
               <button
+                type="button"
                 className="st-btn"
                 onClick={async () => {
                   if (!draft.trim()) return;
+                  if (activeKey.startsWith('company-') && !studentUserId) {
+                    toast.error('Profile still loading — try again in a moment.');
+                    return;
+                  }
+                  const subj = activeContact?.name ? `Message to ${activeContact.name}` : 'Direct message';
                   const fd = new FormData();
                   fd.append('thread_key', activeKey);
-                  fd.append('subject', activeKey);
+                  fd.append('subject', subj);
                   fd.append('from_name', studentName);
+                  if (profile?.email) fd.append('from_email', profile.email);
                   fd.append('body', draft);
                   fd.append('category', 'general');
                   fd.append('sentiment', 'neutral');

@@ -8,6 +8,7 @@ use App\Models\Department;
 use App\Models\Internship;
 use App\Models\StudentInterview;
 use App\Models\User;
+use App\Services\InternshipCompositeGradeService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -73,6 +74,84 @@ class SuperAdminReportController extends Controller
         $this->ensureSuperAdmin($request);
 
         return response()->json($this->buildDashboardPayload($request));
+    }
+
+    /**
+     * Company internship evaluations (mid-term + final) combined with examiner campus evaluation.
+     */
+    public function internshipCompositeGrades(Request $request)
+    {
+        $this->ensureSuperAdmin($request);
+
+        $service = new InternshipCompositeGradeService();
+
+        $query = Application::query()
+            ->with(['student.department', 'internship.company'])
+            ->where('status', 'approved')
+            ->whereHas('internship');
+
+        if ($request->filled('search')) {
+            $term = '%' . str_replace(['%', '_'], ['\\%', '\\_'], (string) $request->query('search')) . '%';
+            $query->whereHas('student', function ($q) use ($term) {
+                $q->where('first_name', 'like', $term)
+                    ->orWhere('last_name', 'like', $term)
+                    ->orWhere('student_id', 'like', $term)
+                    ->orWhere('email', 'like', $term);
+            });
+        }
+
+        if ($request->boolean('complete_only')) {
+            $query
+                ->whereExists(function ($sub) {
+                    $sub->selectRaw('1')
+                        ->from('evaluations')
+                        ->whereColumn('evaluations.application_id', 'applications.id')
+                        ->whereNotNull('evaluations.company_id')
+                        ->where('evaluations.type', 'midterm');
+                })
+                ->whereExists(function ($sub) {
+                    $sub->selectRaw('1')
+                        ->from('evaluations')
+                        ->whereColumn('evaluations.application_id', 'applications.id')
+                        ->whereNotNull('evaluations.company_id')
+                        ->where('evaluations.type', 'final');
+                })
+                ->whereExists(function ($sub) {
+                    $sub->selectRaw('1')
+                        ->from('examiner_report_evaluations')
+                        ->whereColumn('examiner_report_evaluations.application_id', 'applications.id')
+                        ->where('examiner_report_evaluations.report_type', InternshipCompositeGradeService::CAMPUS_REPORT_TYPE)
+                        ->whereIn('examiner_report_evaluations.status', ['evaluated', 'published']);
+                });
+        }
+
+        $paginator = $query
+            ->orderByDesc('updated_at')
+            ->paginate($request->integer('per_page', 25));
+
+        $paginator->getCollection()->transform(function (Application $app) use ($service) {
+            return $service->breakdownForApplication($app);
+        });
+
+        $summary = [
+            'weights' => [
+                'company_internship' => InternshipCompositeGradeService::WEIGHT_COMPANY,
+                'campus_examiner' => InternshipCompositeGradeService::WEIGHT_CAMPUS,
+            ],
+            'campus_report_type' => InternshipCompositeGradeService::CAMPUS_REPORT_TYPE,
+            'note' => 'Combined score is shown only when the company has submitted both mid-internship and final evaluations (averaged 50/50) and an examiner campus evaluation exists.',
+        ];
+
+        return response()->json([
+            'summary' => $summary,
+            'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
     }
 
     public function export(Request $request)

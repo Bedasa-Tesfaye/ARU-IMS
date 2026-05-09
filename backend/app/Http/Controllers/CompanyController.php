@@ -13,6 +13,7 @@ use App\Models\StudentMessage;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class CompanyController extends Controller
@@ -997,14 +998,23 @@ class CompanyController extends Controller
     public function messages(Request $request)
     {
         $user = $this->companyUser($request);
-        $studentIds = $this->applicationsQuery((int) $user->company_id)->pluck('student_id')->unique()->filter()->values();
+        $cid = (int) $user->company_id;
+        $studentIds = $this->applicationsQuery($cid)->pluck('student_id')->unique()->filter()->values();
 
-        return response()->json(
-            StudentMessage::query()
-                ->whereIn('student_id', $studentIds->all())
-                ->orderByDesc('created_at')
-                ->paginate(50)
-        );
+        $paginator = StudentMessage::query()
+            ->whereIn('student_id', $studentIds->all())
+            ->where('thread_key', 'like', 'company-' . $cid . '-%')
+            ->orderByDesc('created_at')
+            ->paginate(50);
+
+        $paginator->getCollection()->transform(function (StudentMessage $m) {
+            $row = $m->toArray();
+            $row['attachment_url'] = $m->attachment_path ? route('company.message.attachment', ['id' => $m->id]) : null;
+
+            return $row;
+        });
+
+        return response()->json($paginator);
     }
 
     public function sendMessage(Request $request)
@@ -1033,6 +1043,38 @@ class CompanyController extends Controller
         ]);
 
         return response()->json(['message' => $msg], 201);
+    }
+
+    public function markMessageRead(Request $request, int $id)
+    {
+        $user = $this->companyUser($request);
+        $company = $this->companyModel($user);
+        $cid = (int) $company->id;
+        $studentIds = $this->applicationsQuery($cid)->pluck('student_id')->unique();
+
+        $message = StudentMessage::query()->findOrFail($id);
+        abort_unless($studentIds->contains((int) $message->student_id), 403);
+        abort_unless(str_starts_with((string) $message->thread_key, 'company-' . $cid . '-'), 403);
+
+        $message->update(['read_at' => now()]);
+
+        return response()->json(['message' => 'Marked read.', 'item' => $message->fresh()]);
+    }
+
+    public function viewMessageAttachment(Request $request, int $id)
+    {
+        $user = $this->companyUser($request);
+        $company = $this->companyModel($user);
+        $cid = (int) $company->id;
+        $studentIds = $this->applicationsQuery($cid)->pluck('student_id')->unique();
+
+        $message = StudentMessage::query()->findOrFail($id);
+        abort_unless($studentIds->contains((int) $message->student_id), 403);
+        abort_unless(str_starts_with((string) $message->thread_key, 'company-' . $cid . '-'), 403);
+        abort_unless($message->attachment_path, 404, 'Attachment not found.');
+        abort_unless(Storage::disk('public')->exists($message->attachment_path), 404, 'Attachment not found.');
+
+        return Storage::disk('public')->response($message->attachment_path);
     }
 
     public function schedule(Request $request)

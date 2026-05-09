@@ -10,6 +10,7 @@ import Sidebar from "./superadmin/components/Sidebar";
 import UserManagementPanel from "./superadmin/components/UserManagementPanel";
 import CredentialsModal from "./superadmin/components/CredentialsModal";
 import ReportsAnalyticsPanel from "./superadmin/components/ReportsAnalyticsPanel";
+import InternshipGradesPanel from "./superadmin/components/InternshipGradesPanel";
 import AIInsightsPanel from "./superadmin/components/AIInsightsPanel";
 import AuditLogsPanel from "./superadmin/components/AuditLogsPanel";
 import SettingsPanel from "./superadmin/components/SettingsPanel";
@@ -353,11 +354,7 @@ const SuperAdminDashboard = () => {
     const handleHeaderSearch = (query) => {
         const q = String(query || "").toLowerCase();
         if (!q) return;
-        if (
-            q.includes("approval") ||
-            q.includes("partner") ||
-            q.includes("internship")
-        ) {
+        if (q.includes("approval") || q.includes("partner")) {
             setActiveSection("pending-approvals");
             toast.success("Opened Pending Approvals.");
             return;
@@ -379,6 +376,11 @@ const SuperAdminDashboard = () => {
         ) {
             setActiveSection("reports-analytics");
             toast.success("Opened Reports & Analytics.");
+            return;
+        }
+        if (q.includes("composite") || q.includes("grade board")) {
+            setActiveSection("internship-grades");
+            toast.success("Opened Internship grades.");
             return;
         }
         if (
@@ -838,6 +840,9 @@ const SuperAdminDashboard = () => {
         }
         if (activeSection === "reports-analytics") {
             return <ReportsAnalyticsPanel departments={departments} />;
+        }
+        if (activeSection === "internship-grades") {
+            return <InternshipGradesPanel />;
         }
         if (activeSection === "ai-insights") {
             return (

@@ -85,6 +85,8 @@ const AdvisorDashboard = () => {
     scheduled_at: '',
     notes: '',
     format: 'video',
+    company_name: '',
+    position_title: '',
   });
   const [settingsDraft, setSettingsDraft] = useState({
     ai_assistance_level: 'balanced',
@@ -211,6 +213,13 @@ const AdvisorDashboard = () => {
     }
   };
 
+  const openAdvisorMessagesFor = useCallback((studentId) => {
+    const id = Number(studentId);
+    if (!Number.isFinite(id) || id <= 0) return;
+    setMsgThreadKey(id);
+    setActive('messages');
+  }, []);
+
   const sendAi = async () => {
     const message = aiInput.trim();
     if (!message) return;
@@ -251,8 +260,23 @@ const AdvisorDashboard = () => {
       if (!row.read_at) cur.unread += 1;
       map.set(sid, cur);
     });
+    (students || []).forEach((s) => {
+      if (!map.has(s.id)) {
+        map.set(s.id, {
+          student_id: s.id,
+          last: {
+            id: 0,
+            body: 'No messages yet — start the conversation.',
+            created_at: '1970-01-01T00:00:00.000000Z',
+            sentiment: 'neutral',
+            read_at: '1970-01-01T00:00:00.000000Z',
+          },
+          unread: 0,
+        });
+      }
+    });
     return [...map.values()].sort((a, b) => new Date(b.last.created_at) - new Date(a.last.created_at));
-  }, [messages]);
+  }, [messages, students]);
 
   useEffect(() => {
     if (active !== 'messages') return;
@@ -358,6 +382,7 @@ const AdvisorDashboard = () => {
         setActive={setActive}
         showToast={showToast}
         setBusyKey={setBusyKey}
+        onOpenMessagesForStudent={openAdvisorMessagesFor}
       />
     ),
     reviews: (
@@ -401,6 +426,8 @@ const AdvisorDashboard = () => {
         showToast={showToast}
         loadAll={loadAll}
         setActive={setActive}
+        advisorUserId={auth?.id}
+        advisorEmail={(auth?.email || '').toLowerCase()}
       />
     ),
     documents: (

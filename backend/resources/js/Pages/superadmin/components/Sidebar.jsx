@@ -54,6 +54,11 @@ const Sidebar = ({ activeSection, setActiveSection, sidebarOpen, setSidebarOpen,
       icon: '📈',
     },
     {
+      id: 'internship-grades',
+      label: 'Internship grades',
+      icon: '🎓',
+    },
+    {
       id: 'ai-insights',
       label: 'AI Insights & Automation',
       icon: '🤖',

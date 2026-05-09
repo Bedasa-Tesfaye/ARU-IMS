@@ -133,6 +133,7 @@ Route::middleware('auth:web')->group(function () {
         Route::put('/settings/credential-policy', [SuperAdminRegistrationController::class, 'updateCredentialPolicy']);
         Route::get('/reports/company-engagement', [SuperAdminReportController::class, 'companyEngagement']);
         Route::get('/reports/dashboard', [SuperAdminReportController::class, 'dashboard']);
+        Route::get('/reports/internship-grades', [SuperAdminReportController::class, 'internshipCompositeGrades']);
         Route::post('/reports/export', [SuperAdminReportController::class, 'export']);
     });
 
@@ -247,6 +248,8 @@ Route::middleware('auth:web')->group(function () {
         Route::get('/interns/{id}/evaluations', [CompanyController::class, 'internEvaluations']);
         Route::get('/messages', [CompanyController::class, 'messages']);
         Route::post('/messages/send', [CompanyController::class, 'sendMessage']);
+        Route::put('/messages/{id}/read', [CompanyController::class, 'markMessageRead']);
+        Route::get('/messages/{id}/attachment', [CompanyController::class, 'viewMessageAttachment'])->name('company.message.attachment');
         Route::get('/schedule', [CompanyController::class, 'schedule']);
         Route::post('/schedule', [CompanyController::class, 'storeSchedule']);
         Route::get('/analytics', [CompanyController::class, 'analytics']);

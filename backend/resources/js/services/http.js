@@ -77,6 +77,8 @@ export const superAdminAPI = {
   assignBoth: (payload) => http.post('/admin/assign/both', payload),
   getCompanyEngagementReport: (params) => http.get(`/admin/reports/company-engagement${buildQuery(params)}`),
   getReportsDashboard: (params) => http.get(`/admin/reports/dashboard${buildQuery(params)}`),
+  getInternshipCompositeGrades: (params) =>
+    http.get(`/admin/reports/internship-grades${buildQuery(params)}`),
   exportReport: (payload) =>
     http.post('/admin/reports/export', payload, { responseType: 'blob' }),
 };
@@ -213,6 +215,8 @@ export const companyAPI = {
   getInternEvaluations: (id) => http.get(`/api/company/interns/${id}/evaluations`),
   getMessages: (params) => http.get(`/api/company/messages${buildQuery(params)}`),
   sendMessage: (payload) => http.post('/api/company/messages/send', payload),
+  markMessageRead: (id) => http.put(`/api/company/messages/${id}/read`),
+  viewMessageAttachment: (id) => http.get(`/api/company/messages/${id}/attachment`, { responseType: 'blob' }),
   getSchedule: (params) => http.get(`/api/company/schedule${buildQuery(params)}`),
   createSchedule: (payload) => http.post('/api/company/schedule', payload),
   getAnalytics: () => http.get('/api/company/analytics'),

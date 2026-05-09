@@ -1,11 +1,56 @@
-/* ============================================ */
-/* STUDENT CARD - EXAMINEE SNAPSHOT              */
-/* ============================================ */
-.student-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.student-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--ex-primary); color: #fff; display: grid; place-items: center; font-weight: 700; }
-.student-meta { margin: 0; padding: 0; list-style: none; color: var(--ex-muted); display: grid; gap: 4px; font-size: .9rem; }
-.student-progress { margin-top: 10px; }
-.student-progress > div:first-child { display: flex; justify-content: space-between; font-size: .9rem; }
-.progress-track { height: 9px; border-radius: 999px; background: #e2e8f0; overflow: hidden; margin-top: 6px; }
-.progress-track i { display: block; height: 100%; background: var(--ex-primary); }
-.student-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+/* Examinee cards */
+
+.student-card .student-head h4 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.student-card .student-head small {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.examiner-card .student-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.examiner-card .student-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  font-size: 1.05rem;
+}
+
+.examiner-card .student-meta {
+  font-size: 0.87rem;
+  line-height: 1.4;
+}
+
+.examiner-card .student-meta li strong {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.examiner-card .student-actions .examiner-btn {
+  font-size: 0.82rem;
+  padding: 8px 12px;
+}
+
+.examiner-card .student-actions .examiner-btn.secondary {
+  background: #f1f5f9;
+  color: #334155;
+  box-shadow: none;
+  border: 1px solid #e2e8f0;
+}
+
+.examiner-card .student-actions .examiner-btn.secondary:hover {
+  background: #e2e8f0;
+  filter: none;
+}

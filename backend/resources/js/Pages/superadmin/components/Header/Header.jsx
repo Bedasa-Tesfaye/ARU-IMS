@@ -108,6 +108,7 @@ const Header = ({
       'assign': 'Assign Examiners & Advisors',
       'reports': 'Reports & Analytics',
       'reports-analytics': 'Reports & Analytics',
+      'internship-grades': 'Internship composite grades',
       'ai-insights': 'AI Insights & Automation',
       'audit-logs': 'Audit Logs',
     };
@@ -132,6 +133,7 @@ const Header = ({
       'assign': '🧩',
       'reports': '📈',
       'reports-analytics': '📈',
+      'internship-grades': '🎓',
       'ai-insights': '🤖',
       'audit-logs': '📋',
     };

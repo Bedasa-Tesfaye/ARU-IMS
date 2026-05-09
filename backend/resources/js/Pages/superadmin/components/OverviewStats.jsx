@@ -249,6 +249,7 @@ const OverviewStats = ({
             { id: 'approve', label: 'Approve', icon: '⏳', to: 'pending-approvals' },
             { id: 'assign', label: 'Assign', icon: '🧩', to: 'assign' },
             { id: 'report', label: 'Report', icon: '📈', to: 'reports-analytics' },
+            { id: 'grades', label: 'Grades', icon: '🎓', to: 'internship-grades' },
             { id: 'backup', label: 'Backup', icon: '💾', to: null },
             { id: 'announce', label: 'Announce', icon: '📣', to: null },
           ].map((a) => (

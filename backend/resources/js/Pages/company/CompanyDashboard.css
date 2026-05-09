@@ -62,6 +62,32 @@
   }
 }
 
+.co-find-results {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.co-find-result-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--co-border);
+  border-radius: 12px;
+  background: var(--co-surface);
+}
+
+.co-find-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 @media (max-width: 960px) {
   .co-layout {
     grid-template-columns: 1fr;

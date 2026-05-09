@@ -90,7 +90,8 @@ const ExaminerDashboard = () => {
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [draft, setDraft] = useState({});
+  const [draft, setDraft] = useState({ report_type: 'campus' });
+  const [studentAppsForEval, setStudentAppsForEval] = useState([]);
   const [aiInput, setAiInput] = useState('');
   const [aiChat, setAiChat] = useState([
     { role: 'ai', text: 'Examiner AI assistant is ready. Ask for feedback drafting, consistency checks, or viva question banks.' },
@@ -187,6 +188,28 @@ const ExaminerDashboard = () => {
     }, 300);
     return () => window.clearTimeout(id);
   }, [search]);
+
+  useEffect(() => {
+    const sid = draft.student_id;
+    if (!sid) {
+      setStudentAppsForEval([]);
+      return;
+    }
+    let cancelled = false;
+    examinerAPI
+      .getStudentDetail(sid)
+      .then((res) => {
+        if (cancelled) return;
+        const apps = res.data?.applications || [];
+        setStudentAppsForEval(apps);
+      })
+      .catch(() => {
+        if (!cancelled) setStudentAppsForEval([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [draft.student_id]);
 
   const kpi = useMemo(() => ({
     total_assigned_students: stats?.stats?.total_assigned_students || students.length,
@@ -395,20 +418,26 @@ const ExaminerDashboard = () => {
 
   const submitEvaluation = async (computed) => {
     if (!draft.student_id) return showToast('Select a student before submitting.', 'error');
+    const reportType = draft.report_type || 'campus';
+    if (reportType === 'campus' && !draft.application_id) {
+      return showToast('Select the internship application for campus evaluation.', 'error');
+    }
     try {
       await examinerAPI.evaluateReport({
         student_id: draft.student_id,
-        report_type: draft.report_type || 'final',
-        technical_score: draft.technical_score || 0,
-        documentation_score: draft.documentation_score || 0,
-        methodology_score: draft.methodology_score || 0,
-        learning_score: draft.learning_score || 0,
-        presentation_score: draft.presentation_score || 0,
+        application_id: draft.application_id || undefined,
+        report_type: reportType,
+        technical_score: draft.technical_score ?? 0,
+        documentation_score: draft.documentation_score ?? 0,
+        methodology_score: draft.methodology_score ?? 0,
+        learning_score: draft.learning_score ?? 0,
+        presentation_score: draft.presentation_score ?? 0,
         overall_score: draft.overall_score || computed.overall,
         grade: draft.grade || computed.grade,
         comments: draft.comments || '',
       });
-      setDraft({});
+      setDraft({ report_type: 'campus' });
+      setStudentAppsForEval([]);
       showToast('Evaluation submitted successfully.');
       loadAll();
     } catch {
@@ -495,7 +524,7 @@ const ExaminerDashboard = () => {
               setStudentDetail(res.data || s);
             }}
             onEvaluate={() => {
-              setDraft((d) => ({ ...d, student_id: s.id }));
+              setDraft({ student_id: s.id, report_type: 'campus', application_id: '' });
               setActive('reports');
             }}
           />
@@ -553,10 +582,49 @@ const ExaminerDashboard = () => {
       </article>
       <article className="examiner-card">
         <h4>📊 Evaluation Form</h4>
-        <select value={draft.student_id || ''} onChange={(e) => setDraft((d) => ({ ...d, student_id: Number(e.target.value) || '' }))}>
-          <option value="">Select student</option>
-          {students.map((s) => <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>)}
-        </select>
+        <div className="examiner-eval-controls">
+          <select
+            value={draft.student_id || ''}
+            onChange={(e) =>
+              setDraft((d) => ({
+                ...d,
+                student_id: Number(e.target.value) || '',
+                application_id: '',
+              }))
+            }
+          >
+            <option value="">Select student</option>
+            {students.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.first_name} {s.last_name}
+              </option>
+            ))}
+          </select>
+          <label className="examiner-field-label">
+            <span>Internship application</span>
+            <select
+              value={draft.application_id || ''}
+              onChange={(e) =>
+                setDraft((d) => ({
+                  ...d,
+                  application_id: e.target.value ? Number(e.target.value) : '',
+                }))
+              }
+            >
+              <option value="">Select placement…</option>
+              {studentAppsForEval.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.internship?.title || `Application #${a.id}`}
+                  {a.internship?.company?.name ? ` · ${a.internship.company.name}` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <p className="examiner-campus-hint">
+          For <strong>Campus / return evaluation</strong>, the application link is required so results merge with company
+          internship grades on the Super Admin board.
+        </p>
         <EvaluationForm draft={draft} setDraft={setDraft} onSuggest={askAiScores} onSubmit={submitEvaluation} />
       </article>
     </section>

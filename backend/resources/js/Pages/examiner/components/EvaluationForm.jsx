@@ -14,6 +14,13 @@ const criteriaByType = {
     { key: 'documentation_score', label: 'Structure (30%)', weight: 0.3 },
     { key: 'presentation_score', label: 'Presentation (30%)', weight: 0.3 },
   ],
+  /** After the student returns to campus — oral defense & evidence review (stored as report_type "campus"). */
+  campus: [
+    { key: 'technical_score', label: 'Technical depth (25%)', weight: 0.25 },
+    { key: 'documentation_score', label: 'Report & evidence (25%)', weight: 0.25 },
+    { key: 'presentation_score', label: 'Oral defense (25%)', weight: 0.25 },
+    { key: 'learning_score', label: 'Reflection & learning (25%)', weight: 0.25 },
+  ],
 };
 
 const scoreToGrade = (score) => {
@@ -30,6 +37,10 @@ const scoreToGrade = (score) => {
 const EvaluationForm = ({ draft, setDraft, onSuggest, onSubmit }) => {
   const reportType = draft.report_type || 'final';
   const criteria = criteriaByType[reportType] || criteriaByType.final;
+  const typeHint =
+    reportType === 'campus'
+      ? 'Campus evaluation counts toward the official composite grade with company internship reviews.'
+      : '';
 
   const computed = useMemo(() => {
     const total = criteria.reduce((sum, c) => sum + (Number(draft[c.key]) || 0) * c.weight, 0);
@@ -43,6 +54,7 @@ const EvaluationForm = ({ draft, setDraft, onSuggest, onSubmit }) => {
     <div className="evaluation-form">
       <div className="evaluation-top">
         <select value={reportType} onChange={(e) => setDraft((d) => ({ ...d, report_type: e.target.value }))}>
+          <option value="campus">Campus / return evaluation</option>
           <option value="final">Final report</option>
           <option value="midterm">Mid-term report</option>
         </select>
@@ -52,6 +64,7 @@ const EvaluationForm = ({ draft, setDraft, onSuggest, onSubmit }) => {
           onChange={(e) => setDraft((d) => ({ ...d, grade: e.target.value }))}
         />
       </div>
+      {typeHint && <p className="evaluation-type-hint">{typeHint}</p>}
       <div className="evaluation-criteria">
         {criteria.map((c) => (
           <label key={c.key}>

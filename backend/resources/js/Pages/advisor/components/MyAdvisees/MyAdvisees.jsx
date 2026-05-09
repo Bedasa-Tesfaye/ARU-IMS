@@ -24,6 +24,7 @@ export default function MyAdvisees({
   setActive,
   showToast,
   setBusyKey,
+  onOpenMessagesForStudent,
 }) {
   const studentTable = (
     <div className="adv-table-wrap">
@@ -63,9 +64,14 @@ export default function MyAdvisees({
               <td>{formatRelative(s.last_active)}</td>
               <td>{s.ai_flag === 'attention' ? '⚠️' : '—'}</td>
               <td>
-                <button type="button" className="adv-btn ghost adv-btn-sm" onClick={() => openStudent(s.id)}>
-                  Open
-                </button>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <button type="button" className="adv-btn ghost adv-btn-sm" onClick={() => openStudent(s.id)}>
+                    Open
+                  </button>
+                  <button type="button" className="adv-btn ghost adv-btn-sm" onClick={() => onOpenMessagesForStudent?.(s.id)}>
+                    Message
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
@@ -162,6 +168,11 @@ export default function MyAdvisees({
                     {s.first_name} {s.last_name}
                   </strong>
                   <small>{s.ai_insight}</small>
+                  <div className="adv-kanban-card-actions" onClick={(e) => e.stopPropagation()}>
+                    <button type="button" className="adv-btn ghost adv-btn-sm" onClick={() => onOpenMessagesForStudent?.(s.id)}>
+                      Message
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -176,7 +187,7 @@ export default function MyAdvisees({
               key={s.id}
               student={s}
               onOpen={() => openStudent(s.id)}
-              onMessage={() => setActive('messages')}
+              onMessage={() => onOpenMessagesForStudent?.(s.id)}
               onMeetings={() => setActive('meetings')}
               onReviews={() => setActive('reviews')}
             />
@@ -234,7 +245,11 @@ export default function MyAdvisees({
                 <button type="button" className="adv-btn adv-btn-sm" onClick={() => setActive('meetings')}>
                   Schedule meeting
                 </button>
-                <button type="button" className="adv-btn secondary adv-btn-sm" onClick={() => setActive('messages')}>
+                <button
+                  type="button"
+                  className="adv-btn secondary adv-btn-sm"
+                  onClick={() => onOpenMessagesForStudent?.(selectedStudentId)}
+                >
                   Send message
                 </button>
                 <button type="button" className="adv-btn ghost adv-btn-sm" onClick={() => setActive('documents')}>

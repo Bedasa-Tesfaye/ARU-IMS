@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { advisorAPI, aiAdvisorAPI } from '../../../../services/http';
 import { meetingTypeStyle } from '../../utils';
 import MeetingCard from '../shared/MeetingCard/MeetingCard';
 import './MeetingSchedule.css';
+
+function studentLabel(s) {
+  return `${s.first_name || ''} ${s.last_name || ''}`.trim() || `User #${s.id}`;
+}
 
 export default function MeetingSchedule({
   calendarMode,
@@ -14,6 +18,27 @@ export default function MeetingSchedule({
   showToast,
   loadAll,
 }) {
+  const [studentSearch, setStudentSearch] = useState('');
+
+  const filteredStudents = useMemo(() => {
+    const list = students || [];
+    const q = studentSearch.trim().toLowerCase();
+    if (!q) return list.slice(0, 60);
+    return list
+      .filter((s) => {
+        const name = studentLabel(s).toLowerCase();
+        const uid = String(s.id);
+        const code = String(s.student_id || '').toLowerCase();
+        return name.includes(q) || uid === q || code.includes(q) || `${s.first_name} ${s.last_name}`.toLowerCase().includes(q);
+      })
+      .slice(0, 50);
+  }, [students, studentSearch]);
+
+  const selectedStudent = useMemo(
+    () => (students || []).find((s) => String(s.id) === String(meetingDraft.student_id)),
+    [students, meetingDraft.student_id],
+  );
+
   return (
     <div className="adv-meetings-page">
       <section className="adv-card">
@@ -43,32 +68,117 @@ export default function MeetingSchedule({
       </section>
 
       <div className="adv-grid">
-        <section className="adv-card">
+        <section className="adv-card adv-schedule-form-card">
           <h4>Schedule advising session</h4>
-          <div className="adv-form-row">
-            <select value={meetingDraft.student_id} onChange={(e) => setMeetingDraft((d) => ({ ...d, student_id: e.target.value }))}>
-              <option value="">Select student</option>
-              {(students || []).map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.first_name} {s.last_name}
-                </option>
-              ))}
-            </select>
-            <input type="datetime-local" value={meetingDraft.scheduled_at} onChange={(e) => setMeetingDraft((d) => ({ ...d, scheduled_at: e.target.value }))} />
-            <select value={meetingDraft.format} onChange={(e) => setMeetingDraft((d) => ({ ...d, format: e.target.value }))}>
-              <option value="video">Video</option>
-              <option value="phone">Phone</option>
-              <option value="in_person">In person</option>
-            </select>
+          <p className="adv-muted adv-schedule-hint">
+            Search advisees by name, university student number, or user ID. Then set time and format.
+          </p>
+
+          <label className="adv-schedule-field-label">
+            Find student
+            <input
+              type="search"
+              className="adv-schedule-search"
+              placeholder="Name, student ID code, or numeric user ID…"
+              value={studentSearch}
+              onChange={(e) => setStudentSearch(e.target.value)}
+            />
+          </label>
+
+          <div className="adv-student-pick-list">
+            {filteredStudents.length === 0 && <div className="adv-student-pick-empty">No students match this search.</div>}
+            {filteredStudents.map((s) => {
+              const active = String(meetingDraft.student_id) === String(s.id);
+              const initials = studentLabel(s)
+                .split(/\s+/)
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((p) => p[0]?.toUpperCase())
+                .join('');
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={`adv-student-pick ${active ? 'active' : ''}`}
+                  onClick={() => setMeetingDraft((d) => ({ ...d, student_id: String(s.id) }))}
+                >
+                  <span className="adv-student-pick-av">{initials}</span>
+                  <div className="adv-student-pick-body">
+                    <strong>{studentLabel(s)}</strong>
+                    <span className="adv-student-pick-meta">
+                      User #{s.id}
+                      {s.student_id ? ` · ${s.student_id}` : ''}
+                      {s.internship_stage ? ` · ${s.internship_stage.replace(/_/g, ' ')}` : ''}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
           </div>
-          <textarea placeholder="Agenda / notes — AI can expand" value={meetingDraft.notes} onChange={(e) => setMeetingDraft((d) => ({ ...d, notes: e.target.value }))} />
+
+          {selectedStudent && (
+            <div className="adv-schedule-selected">
+              Selected: <strong>{studentLabel(selectedStudent)}</strong>
+              <button
+                type="button"
+                className="adv-btn ghost adv-btn-sm adv-schedule-clear"
+                onClick={() => setMeetingDraft((d) => ({ ...d, student_id: '' }))}
+              >
+                Clear
+              </button>
+            </div>
+          )}
+
+          <div className="adv-form-row adv-schedule-row-2">
+            <label className="adv-schedule-inline-label">
+              When
+              <input
+                type="datetime-local"
+                value={meetingDraft.scheduled_at}
+                onChange={(e) => setMeetingDraft((d) => ({ ...d, scheduled_at: e.target.value }))}
+              />
+            </label>
+            <label className="adv-schedule-inline-label">
+              Format
+              <select value={meetingDraft.format} onChange={(e) => setMeetingDraft((d) => ({ ...d, format: e.target.value }))}>
+                <option value="video">Video</option>
+                <option value="phone">Phone</option>
+                <option value="in_person">In person</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="adv-form-row adv-schedule-row-2">
+            <label className="adv-schedule-inline-label">
+              Session label (optional)
+              <input
+                placeholder="e.g. Career check-in"
+                value={meetingDraft.position_title || ''}
+                onChange={(e) => setMeetingDraft((d) => ({ ...d, position_title: e.target.value }))}
+              />
+            </label>
+            <label className="adv-schedule-inline-label">
+              Organization (optional)
+              <input
+                placeholder="e.g. ARU Advising"
+                value={meetingDraft.company_name || ''}
+                onChange={(e) => setMeetingDraft((d) => ({ ...d, company_name: e.target.value }))}
+              />
+            </label>
+          </div>
+
+          <textarea
+            placeholder="Agenda / notes — AI can expand"
+            value={meetingDraft.notes}
+            onChange={(e) => setMeetingDraft((d) => ({ ...d, notes: e.target.value }))}
+          />
           <div className="adv-inline-actions">
             <button
               type="button"
               className="adv-btn"
               onClick={async () => {
                 if (!meetingDraft.student_id || !meetingDraft.scheduled_at) {
-                  showToast('Pick student and time.', 'error');
+                  showToast('Pick a student and time.', 'error');
                   return;
                 }
                 await advisorAPI.createMeeting({
@@ -76,6 +186,8 @@ export default function MeetingSchedule({
                   scheduled_at: meetingDraft.scheduled_at,
                   notes: meetingDraft.notes,
                   format: meetingDraft.format,
+                  company_name: meetingDraft.company_name || undefined,
+                  position_title: meetingDraft.position_title || undefined,
                 });
                 showToast('Meeting scheduled.');
                 loadAll();
