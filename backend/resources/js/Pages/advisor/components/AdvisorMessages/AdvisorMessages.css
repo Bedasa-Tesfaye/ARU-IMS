@@ -5,15 +5,18 @@
 .adv-messages-layout {
   display: grid;
   grid-template-columns: 260px 1fr 220px;
-  gap: 14px;
+  gap: clamp(12px, 2vw, 18px);
   align-items: start;
 }
 
 .adv-msg-col {
-  background: #fff;
-  border-radius: 16px;
-  padding: 14px;
-  box-shadow: 0 6px 20px rgba(15, 118, 110, 0.06);
+  background: linear-gradient(185deg, #ffffff 0%, #fafdfd 100%);
+  border-radius: 18px;
+  padding: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow:
+    0 6px 22px rgba(15, 118, 110, 0.07),
+    0 0 0 1px rgba(255, 255, 255, 0.75) inset;
 }
 
 .adv-msg-hint {
@@ -24,11 +27,20 @@
 
 .adv-msg-search {
   width: 100%;
-  padding: 9px 11px;
-  border-radius: 11px;
+  padding: 10px 14px;
+  border-radius: 999px;
   border: 1px solid #e2e8f0;
   font: inherit;
   margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.adv-msg-search:focus {
+  outline: none;
+  border-color: #5eead4;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.18);
 }
 
 .adv-msg-filters {
@@ -59,8 +71,9 @@
 }
 
 .adv-msg-thread.active {
-  border-color: #99f6e4;
-  background: #f0fdfa;
+  border-color: #5eead4;
+  background: linear-gradient(135deg, #f0fdfa, #ecfeff);
+  box-shadow: 0 2px 10px rgba(13, 148, 136, 0.1);
 }
 
 .adv-msg-avatar {
@@ -112,10 +125,11 @@
 }
 
 .adv-msg-chat {
-  background: #fff;
-  border-radius: 16px;
-  padding: 14px;
-  box-shadow: 0 6px 20px rgba(15, 118, 110, 0.06);
+  background: linear-gradient(185deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 18px;
+  padding: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 8px 26px rgba(15, 118, 110, 0.07);
   display: flex;
   flex-direction: column;
   min-height: 420px;
@@ -173,8 +187,9 @@
 
 .adv-chat-bubble {
   max-width: 92%;
-  padding: 10px 12px;
-  border-radius: 14px;
+  padding: 11px 14px;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
 }
 
 .adv-chat-bubble-head {
@@ -211,10 +226,11 @@
 }
 
 .adv-msg-ai {
-  background: #fff;
-  border-radius: 16px;
-  padding: 14px;
-  box-shadow: 0 6px 20px rgba(15, 118, 110, 0.06);
+  background: linear-gradient(165deg, #faf5ff 0%, #ffffff 48%);
+  border-radius: 18px;
+  padding: 16px;
+  border: 1px solid #ede9fe;
+  box-shadow: 0 8px 26px rgba(91, 33, 182, 0.07);
 }
 
 @media (max-width: 960px) {

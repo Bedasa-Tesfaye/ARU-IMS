@@ -1,14 +1,39 @@
 /* Advisor navigation sidebar */
 
 .adv-sidebar {
-  background: linear-gradient(175deg, #0f766e 0%, #115e59 38%, #134e4a 72%, #042f2e 100%);
+  background:
+    radial-gradient(ellipse 110% 70% at 0% 0%, rgba(153, 246, 228, 0.22), transparent 55%),
+    radial-gradient(ellipse 90% 55% at 100% 85%, rgba(139, 92, 246, 0.18), transparent 48%),
+    linear-gradient(175deg, #0f766e 0%, #115e59 38%, #134e4a 72%, #042f2e 100%);
   color: #fff;
   padding: 22px 18px;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 4px 0 32px rgba(15, 23, 42, 0.12);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 4px 0 40px rgba(15, 23, 42, 0.16);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+@media (min-width: 961px) {
+  .adv-sidebar {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    max-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .adv-sidebar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .adv-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.22);
+    border-radius: 999px;
+  }
 }
 
 .adv-brand {
@@ -19,13 +44,14 @@
 
 .adv-brand h2 {
   margin: 0 0 10px;
-  font-size: 1.12rem;
+  font-size: 1.14rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  background: linear-gradient(90deg, #fff, #99f6e4);
+  background: linear-gradient(100deg, #ffffff 0%, #ccfbf1 50%, #a5f3fc 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  filter: drop-shadow(0 2px 16px rgba(153, 246, 228, 0.25));
 }
 
 .adv-brand-sub {
@@ -64,6 +90,11 @@
 .adv-nav:hover {
   background: rgba(255, 255, 255, 0.12);
   transform: translateX(3px);
+}
+
+.adv-nav:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #042f2e, 0 0 0 4px rgba(153, 246, 228, 0.65);
 }
 
 .adv-nav.active {
@@ -114,10 +145,25 @@
     flex-direction: column;
     align-items: stretch;
     overflow-y: auto;
+    max-height: none;
   }
 
   .adv-sidebar.open {
     transform: translateX(0);
     box-shadow: 8px 0 40px rgba(0, 0, 0, 0.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adv-nav {
+    transition: none !important;
+  }
+
+  .adv-nav:hover {
+    transform: none !important;
+  }
+
+  .adv-sidebar {
+    transition: none !important;
   }
 }

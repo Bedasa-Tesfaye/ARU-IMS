@@ -5,25 +5,61 @@
 .adv-settings-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 14px;
-  margin-top: 12px;
+  gap: 16px;
+  margin-top: 14px;
 }
 
 .adv-settings-grid label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 0.85rem;
+  gap: 8px;
+  font-size: 0.86rem;
   font-weight: 600;
   color: #475569;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, #fafdfd 0%, #ffffff 100%);
+  border-radius: var(--ad-radius-sm, 12px);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-top: 3px solid #14b8a6;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.035);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.adv-settings-grid label:hover {
+  border-top-color: #0d9488;
+  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.08);
+}
+
+.adv-settings-grid label:nth-child(3n + 2) {
+  border-top-color: #8b5cf6;
+}
+
+.adv-settings-grid label:nth-child(3n) {
+  border-top-color: #0ea5e9;
 }
 
 .adv-settings-grid input,
 .adv-settings-grid select {
-  padding: 8px 10px;
-  border-radius: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
   border: 1px solid #e2e8f0;
   font-weight: 400;
+  background: #fafafa;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.adv-settings-grid input:hover,
+.adv-settings-grid select:hover {
+  background: #fff;
+  border-color: #cbd5e1;
+}
+
+.adv-settings-grid input:focus,
+.adv-settings-grid select:focus {
+  outline: none;
+  border-color: #5eead4;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
 }
 
 .adv-span-2 {

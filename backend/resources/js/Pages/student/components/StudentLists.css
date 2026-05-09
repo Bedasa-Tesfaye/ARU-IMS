@@ -9,18 +9,25 @@
 
 .st-list-item {
   border: 1px solid var(--st-border);
-  border-radius: 10px;
-  padding: 12px;
+  border-radius: 14px;
+  padding: 14px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(255, 255, 255, 0.65);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.88));
+  transition:
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    background 0.25s ease,
+    border-color 0.2s ease,
+    box-shadow 0.25s ease;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
 }
 
 .st-list-item:hover {
-  transform: translateY(-1px);
-  background: rgba(16, 185, 129, 0.05);
+  transform: translateY(-2px);
+  background: rgba(236, 253, 245, 0.95);
+  border-color: rgba(16, 185, 129, 0.22);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.08);
 }
 
 [data-st-theme='dark'] .st-list-item {
@@ -33,11 +40,25 @@
 }
 
 .st-empty {
-  border: 1px dashed var(--st-border);
-  border-radius: 10px;
-  padding: 14px;
+  position: relative;
+  overflow: hidden;
+  border: 2px dashed rgba(148, 163, 184, 0.45);
+  border-radius: var(--st-radius, 18px);
+  padding: 28px 18px;
   color: var(--st-muted);
-  background: rgba(148, 163, 184, 0.10);
+  text-align: center;
+  font-weight: 500;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(240, 253, 244, 0.65));
+}
+
+.st-empty::before {
+  content: '';
+  display: block;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 12px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--st-primary-soft, rgba(16, 185, 129, 0.14)), var(--st-accent-soft, rgba(59, 130, 246, 0.1)));
 }
 
 .st-deadline {
@@ -58,6 +79,16 @@
 .st-deadline.red { border-left: 4px solid #ef4444; }
 .st-deadline.orange { border-left: 4px solid #f59e0b; }
 .st-deadline.green { border-left: 4px solid #10b981; }
+
+@media (prefers-reduced-motion: reduce) {
+  .st-list-item {
+    transition: none !important;
+  }
+
+  .st-list-item:hover {
+    transform: none !important;
+  }
+}
 
 @media (max-width: 768px) {
   .st-list-item {

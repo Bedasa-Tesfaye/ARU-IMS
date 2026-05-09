@@ -5,14 +5,19 @@
 .st-card {
   background: var(--st-surface);
   border-radius: var(--st-radius);
-  padding: 16px;
+  padding: 18px;
   border: 1px solid var(--st-border);
   box-shadow: var(--st-shadow);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.28s ease,
+    border-color 0.22s ease;
 }
 
 .st-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow: var(--st-shadow-hover);
+  border-color: rgba(16, 185, 129, 0.22);
 }
 
 .st-card.error {
@@ -21,10 +26,14 @@
 
 .st-hero {
   grid-column: 1 / -1;
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(52, 211, 153, 0.12));
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(52, 211, 153, 0.12), rgba(59, 130, 246, 0.06));
   display: grid;
   grid-template-columns: 1.2fr 0.8fr;
-  gap: 14px;
+  gap: 16px;
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  box-shadow:
+    0 10px 32px rgba(16, 185, 129, 0.12),
+    0 0 0 1px rgba(255, 255, 255, 0.5) inset;
 }
 
 .st-subline {
@@ -100,10 +109,11 @@
 }
 
 .st-mini-card {
-  background: rgba(255, 255, 255, 0.7);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(248, 250, 252, 0.92));
   border: 1px solid var(--st-border);
   border-radius: 14px;
-  padding: 12px;
+  padding: 14px;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.05);
 }
 
 [data-st-theme='dark'] .st-mini-card {
@@ -144,6 +154,17 @@
 .st-pill.orange {
   background: rgba(245, 158, 11, 0.14);
   border-color: rgba(245, 158, 11, 0.22);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-card {
+    transition: none !important;
+  }
+
+  .st-card:hover {
+    transform: none !important;
+    box-shadow: var(--st-shadow) !important;
+  }
 }
 
 @media (max-width: 768px) {

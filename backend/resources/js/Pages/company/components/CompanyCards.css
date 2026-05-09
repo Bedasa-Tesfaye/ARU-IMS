@@ -3,15 +3,29 @@
 /* ============================================ */
 
 .co-card {
-  background: var(--co-surface);
+  background: linear-gradient(185deg, var(--co-surface) 0%, #fafbff 100%);
   border: 1px solid var(--co-border);
-  border-radius: 16px;
-  padding: 1rem;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  border-radius: 18px;
+  padding: 1.1rem 1.15rem;
+  box-shadow:
+    0 8px 26px rgba(15, 23, 42, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.65) inset;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.2s ease;
+}
+
+.co-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--co-shadow-hover);
+  border-color: rgba(102, 126, 234, 0.22);
 }
 
 .co-hero {
   grid-column: span 2;
+  border: 1px solid rgba(199, 210, 254, 0.65);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(238, 242, 255, 0.92), rgba(250, 245, 255, 0.5));
+  box-shadow:
+    0 12px 36px rgba(102, 126, 234, 0.12),
+    0 0 0 1px rgba(255, 255, 255, 0.75) inset;
 }
 
 .co-verify {
@@ -50,11 +64,18 @@
 .co-funnel-step {
   flex: 1;
   min-width: 90px;
-  background: #f8fafc;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
   border: 1px solid var(--co-border);
-  border-radius: 12px;
-  padding: 10px;
+  border-radius: 14px;
+  padding: 12px 10px;
   text-align: center;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.co-funnel-step:hover {
+  border-color: rgba(102, 126, 234, 0.25);
+  box-shadow: 0 6px 18px rgba(102, 126, 234, 0.08);
 }
 
 .co-funnel-step span {
@@ -71,8 +92,29 @@
 
 .co-posting-card {
   border: 1px solid var(--co-border);
-  border-radius: 14px;
-  padding: 12px;
+  border-radius: 16px;
+  padding: 14px;
+  background: linear-gradient(180deg, #ffffff, #fafbff);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.co-posting-card:hover {
+  border-color: rgba(102, 126, 234, 0.22);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .co-card,
+  .co-funnel-step,
+  .co-posting-card {
+    transition: none !important;
+  }
+
+  .co-card:hover,
+  .co-posting-card:hover {
+    transform: none !important;
+  }
 }
 
 @media (max-width: 960px) {

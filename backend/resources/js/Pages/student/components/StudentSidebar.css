@@ -4,14 +4,29 @@
 
 .st-sidebar {
   grid-row: 2;
-  background: linear-gradient(180deg, #0f172a, #111827);
+  background:
+    radial-gradient(ellipse 100% 70% at 0% 0%, rgba(16, 185, 129, 0.22), transparent 55%),
+    radial-gradient(ellipse 80% 50% at 100% 100%, rgba(59, 130, 246, 0.14), transparent 45%),
+    linear-gradient(180deg, #0f172a 0%, #111827 55%, #0c1424 100%);
   color: #fff;
-  padding: 20px;
+  padding: 22px 18px;
   position: sticky;
   top: 60px;
   height: calc(100vh - 60px);
   overflow: auto;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 4px 0 36px rgba(15, 23, 42, 0.14);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+.st-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.st-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
 }
 
 .st-sidebar-head {
@@ -24,6 +39,13 @@
 
 .st-sidebar h2 {
   margin: 0 0 14px;
+  font-size: 1.12rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(95deg, #fff 0%, #a7f3d0 55%, #6ee7b7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .st-nav {
@@ -46,6 +68,26 @@
 .st-nav:hover {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(52, 211, 153, 0.95));
   transform: translateY(-1px);
+}
+
+.st-nav:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #0f172a, 0 0 0 4px rgba(52, 211, 153, 0.65);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-nav {
+    transition: none !important;
+  }
+
+  .st-nav.active,
+  .st-nav:hover {
+    transform: none !important;
+  }
+
+  .st-sidebar {
+    transition: none !important;
+  }
 }
 
 @media (max-width: 1024px) {

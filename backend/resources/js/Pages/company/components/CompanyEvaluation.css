@@ -259,6 +259,11 @@
   box-shadow: 0 2px 8px rgba(79, 70, 229, 0.12);
 }
 
+.co-eval-type-toggle button:focus-visible {
+  outline: none;
+  box-shadow: var(--co-ring);
+}
+
 .co-eval-hint {
   font-size: 0.8125rem;
   color: #64748b;
@@ -411,4 +416,26 @@
   background: #fef3c7;
   color: #b45309;
   border: 1px solid #fde68a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .co-eval-picker-row {
+    transition: none !important;
+  }
+
+  .co-eval-picker-row:hover {
+    transform: none !important;
+  }
+
+  .co-eval-picker-row:active {
+    transform: none !important;
+  }
+
+  .co-eval-actions .co-btn {
+    transition: none !important;
+  }
+
+  .co-eval-actions .co-btn:active {
+    transform: none !important;
+  }
 }

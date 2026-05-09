@@ -10,16 +10,28 @@
 }
 
 .co-stat {
-  background: #fff;
-  border-radius: 14px;
-  padding: 12px;
+  background: linear-gradient(185deg, #ffffff, #f8fafc);
+  border-radius: 16px;
+  padding: 14px 13px;
+  border: 1px solid var(--co-border);
   border-left: 4px solid #3b82f6;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+  box-shadow:
+    0 8px 22px rgba(15, 23, 42, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.7) inset;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.18s ease;
+}
+
+.co-stat:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--co-shadow-hover);
+  border-color: rgba(102, 126, 234, 0.2);
+  border-left-color: #3b82f6;
 }
 
 .co-stat strong {
   display: block;
   font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .co-badge {
@@ -42,6 +54,16 @@
 .co-badge.danger {
   background: #fee2e2;
   color: #b91c1c;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .co-stat {
+    transition: none !important;
+  }
+
+  .co-stat:hover {
+    transform: none !important;
+  }
 }
 
 @media (max-width: 960px) {

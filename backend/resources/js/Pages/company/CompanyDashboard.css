@@ -5,22 +5,47 @@
 :root {
   --co-primary: #667eea;
   --co-primary-2: #764ba2;
+  --co-primary-soft: rgba(102, 126, 234, 0.14);
+  --co-accent-blue: #3b82f6;
+  --co-accent-soft: rgba(59, 130, 246, 0.1);
   --co-bg: #f1f5f9;
   --co-surface: #ffffff;
   --co-text: #0f172a;
   --co-muted: #64748b;
   --co-border: #e2e8f0;
+  --co-font: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  --co-sidebar-width: 280px;
+  --co-shadow-hover: 0 14px 36px rgba(102, 126, 234, 0.12), 0 8px 24px rgba(15, 23, 42, 0.06);
+  --co-shadow-lg: 0 28px 64px rgba(15, 23, 42, 0.12);
+  --co-ring: 0 0 0 3px rgba(102, 126, 234, 0.28);
 }
 
 .co-layout {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: var(--co-sidebar-width) 1fr;
   min-height: 100vh;
   background: var(--co-bg);
+  font-family: var(--co-font);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.co-layout ::selection {
+  background: rgba(102, 126, 234, 0.22);
+  color: var(--co-text);
 }
 
 .co-main {
-  padding: 1.25rem;
+  flex: 1;
+  padding: clamp(1rem, 2.5vw, 1.65rem);
+  width: 100%;
+  max-width: min(1480px, 100%);
+  margin-inline: auto;
+  background-image:
+    radial-gradient(ellipse 82% 52% at 100% -12%, rgba(102, 126, 234, 0.09), transparent 52%),
+    radial-gradient(ellipse 68% 42% at 0% 105%, rgba(118, 75, 162, 0.07), transparent 48%);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(102, 126, 234, 0.35) transparent;
 }
 
 .co-main > .co-card,
@@ -31,7 +56,7 @@
 
 .co-grid {
   display: grid;
-  gap: 1rem;
+  gap: clamp(0.85rem, 2vw, 1.25rem);
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -39,16 +64,31 @@
   position: fixed;
   bottom: 1.25rem;
   right: 1.25rem;
-  padding: 0.75rem 1rem;
-  border-radius: 12px;
-  background: #1e293b;
+  padding: 0.85rem 1.15rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #1e293b, #334155);
   color: #fff;
   z-index: 300;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.24);
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  font-weight: 600;
+  animation: co-toast-in 0.34s cubic-bezier(0.34, 1.12, 0.64, 1);
+}
+
+@keyframes co-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .co-toast.error {
-  background: #dc2626;
+  background: linear-gradient(135deg, #dc2626, #991b1b);
 }
 
 @keyframes coFadeIn {
@@ -76,16 +116,39 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border: 1px solid var(--co-border);
-  border-radius: 12px;
-  background: var(--co-surface);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.co-find-result-row:hover {
+  border-color: rgba(102, 126, 234, 0.28);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.08);
 }
 
 .co-find-result-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .co-main > .co-card,
+  .co-main > .co-grid,
+  .co-main > div > .co-card {
+    animation: none !important;
+  }
+
+  .co-toast {
+    animation: none !important;
+  }
+
+  .co-find-result-row:hover {
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04) !important;
+  }
 }
 
 @media (max-width: 960px) {

@@ -2,10 +2,14 @@
 
 .adv-hero {
   grid-column: span 2;
-  background: linear-gradient(135deg, #ffffff 0%, #f0fdfa 45%, #ecfdf5 100%);
-  border: 1px solid rgba(153, 246, 228, 0.5);
+  background: linear-gradient(135deg, #ffffff 0%, #f0fdfa 42%, #ecfdf5 100%);
+  border: 1px solid rgba(153, 246, 228, 0.55);
   position: relative;
   overflow: hidden;
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.04),
+    0 12px 36px rgba(13, 148, 136, 0.09),
+    0 0 0 1px rgba(255, 255, 255, 0.7) inset;
 }
 
 .adv-hero::before {
@@ -58,18 +62,23 @@
 
 .adv-stat-row .adv-stat {
   text-align: center;
-  padding: 16px 12px;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  padding: 18px 14px;
+  background: linear-gradient(185deg, #ffffff 0%, #fafdfd 100%);
   border: 1px solid rgba(226, 232, 240, 0.95);
   border-left: 4px solid #14b8a6;
-  border-radius: 14px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  border-radius: 16px;
+  box-shadow:
+    0 1px 3px rgba(15, 23, 42, 0.04),
+    0 0 0 1px rgba(255, 255, 255, 0.85) inset;
+  transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.2s ease;
 }
 
 .adv-stat-row .adv-stat:hover {
-  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.12);
-  transform: translateY(-1px);
+  box-shadow:
+    0 8px 28px rgba(13, 148, 136, 0.14),
+    0 0 0 1px rgba(20, 184, 166, 0.12);
+  transform: translateY(-3px);
+  border-color: rgba(153, 246, 228, 0.65);
 }
 
 .adv-stat-row .adv-stat strong {
@@ -226,6 +235,20 @@
 .adv-tip-dots span.on {
   background: linear-gradient(135deg, #14b8a6, #0d9488);
   transform: scale(1.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adv-stat-row .adv-stat {
+    transition: none !important;
+  }
+
+  .adv-stat-row .adv-stat:hover {
+    transform: none !important;
+  }
+
+  .adv-tip-dots span {
+    transition: none !important;
+  }
 }
 
 @media (max-width: 960px) {

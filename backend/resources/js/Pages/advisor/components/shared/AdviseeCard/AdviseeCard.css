@@ -41,7 +41,15 @@
   color: #134e4a;
   flex-shrink: 0;
   font-size: 1.1rem;
-  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.25);
+  box-shadow:
+    0 4px 14px rgba(13, 148, 136, 0.28),
+    0 0 0 2px rgba(255, 255, 255, 0.55) inset;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.adv-student-card:hover .adv-avatar {
+  transform: scale(1.05);
+  box-shadow: 0 6px 18px rgba(13, 148, 136, 0.35);
 }
 
 .adv-avatar img {
@@ -80,4 +88,18 @@
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adv-student-card {
+    transition: none !important;
+  }
+
+  .adv-student-card:hover {
+    transform: none !important;
+  }
+
+  .adv-student-card:hover .adv-avatar {
+    transform: none !important;
+  }
 }

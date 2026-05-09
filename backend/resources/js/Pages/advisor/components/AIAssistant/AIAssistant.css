@@ -2,51 +2,75 @@
 /* AI ASSISTANT - COPILOT CHAT                  */
 /* ============================================ */
 
+.adv-ai-page h3 {
+  font-size: 1.18rem;
+}
+
 .adv-ai-quick {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 12px 0;
+  gap: 10px;
+  margin: 14px 0;
 }
 
-.adv-chat {
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  background: #f8fafc;
-  min-height: 220px;
-  max-height: 340px;
+.adv-ai-page .adv-chat {
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: var(--ad-radius, 16px);
+  background:
+    linear-gradient(165deg, rgba(248, 250, 252, 0.98), rgba(240, 253, 250, 0.85)),
+    radial-gradient(ellipse 70% 50% at 100% 0%, rgba(13, 148, 136, 0.06), transparent 55%);
+  min-height: 240px;
+  max-height: 360px;
   overflow: auto;
-  padding: 12px;
+  padding: 14px;
+  box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.05);
+  scrollbar-width: thin;
 }
 
-.adv-chat-bubble {
-  margin-bottom: 10px;
-  padding: 10px 12px;
-  border-radius: 12px;
+.adv-ai-page .adv-chat-bubble {
+  margin-bottom: 12px;
+  padding: 11px 14px;
+  border-radius: 14px;
   max-width: 92%;
   white-space: pre-wrap;
+  line-height: 1.45;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
-.adv-chat-bubble.user {
+.adv-ai-page .adv-chat-bubble.user {
   margin-left: auto;
-  background: #ccfbf1;
+  background: linear-gradient(135deg, #ccfbf1, #99f6e4);
   color: #134e4a;
+  border: 1px solid rgba(94, 234, 212, 0.65);
 }
 
-.adv-chat-bubble.ai {
-  background: #fff;
+.adv-ai-page .adv-chat-bubble.ai {
+  background: linear-gradient(180deg, #ffffff, #fafafa);
   border: 1px solid #e2e8f0;
 }
 
 .adv-chat-input {
   display: flex;
-  gap: 8px;
-  margin-top: 10px;
+  gap: 10px;
+  margin-top: 12px;
 }
 
-.adv-chat-input input {
+.adv-ai-page .adv-chat-input input {
   flex: 1;
-  padding: 10px 12px;
-  border-radius: 10px;
+  padding: 11px 16px;
+  border-radius: 999px;
   border: 1px solid #e2e8f0;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.adv-ai-page .adv-chat-input input:focus {
+  outline: none;
+  border-color: #5eead4;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adv-ai-page .adv-chat-input input {
+    transition: none !important;
+  }
 }

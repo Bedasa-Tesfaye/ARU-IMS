@@ -104,6 +104,11 @@
   box-shadow: 0 4px 18px rgba(59, 130, 246, 0.12);
 }
 
+.co-schedule-pick:focus-visible {
+  outline: none;
+  box-shadow: var(--co-ring);
+}
+
 .co-schedule-pick-av {
   flex-shrink: 0;
   width: 42px;

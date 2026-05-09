@@ -15,6 +15,7 @@ class ExaminerReportEvaluation extends Model
         'application_id',
         'report_type',
         'status',
+        'deadline',
         'technical_score',
         'documentation_score',
         'methodology_score',
@@ -32,5 +33,6 @@ class ExaminerReportEvaluation extends Model
     protected $casts = [
         'ai_meta' => 'array',
         'evaluated_at' => 'datetime',
+        'deadline' => 'datetime',
     ];
 }

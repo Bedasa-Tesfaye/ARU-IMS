@@ -148,6 +148,13 @@ const ExaminerDashboard = () => {
     }
   };
 
+  const kpi = useMemo(() => ({
+    total_assigned_students: stats?.stats?.total_assigned_students || students.length,
+    reports_pending: stats?.stats?.reports_pending || queue.length,
+    upcoming_viva_sessions: stats?.stats?.upcoming_viva_sessions || viva.length,
+    completion_rate: stats?.stats?.completion_rate || 95,
+  }), [stats, students.length, queue.length, viva.length]);
+
   useEffect(() => {
     loadAll();
   }, []);
@@ -210,13 +217,6 @@ const ExaminerDashboard = () => {
       cancelled = true;
     };
   }, [draft.student_id]);
-
-  const kpi = useMemo(() => ({
-    total_assigned_students: stats?.stats?.total_assigned_students || students.length,
-    reports_pending: stats?.stats?.reports_pending || queue.length,
-    upcoming_viva_sessions: stats?.stats?.upcoming_viva_sessions || viva.length,
-    completion_rate: stats?.stats?.completion_rate || 95,
-  }), [stats, students.length, queue.length, viva.length]);
 
   const filteredStudents = useMemo(() => {
     const term = search.trim().toLowerCase();
