@@ -19,7 +19,6 @@ const buildQuery = (params = {}) => {
 };
 
 export const partnershipAPI = {
-  /** Pass a plain object (JSON) or FormData for file uploads; axios sets multipart boundaries automatically. */
   apply: (payload) => http.post('/api/partnership/apply', payload),
 };
 
@@ -67,9 +66,7 @@ export const superAdminAPI = {
   getCompanyEngagementReport: (params) => http.get(`/admin/reports/company-engagement${buildQuery(params)}`),
   getReportsDashboard: (params) => http.get(`/admin/reports/dashboard${buildQuery(params)}`),
   exportReport: (payload) =>
-    http.post('/admin/reports/export', payload, {
-      responseType: 'blob',
-    }),
+    http.post('/admin/reports/export', payload, { responseType: 'blob' }),
 };
 
 export const internshipAPI = {
@@ -192,6 +189,9 @@ export const companyAPI = {
   shortlistApplicant: (id) => http.post(`/api/company/applicants/${id}/shortlist`),
   scheduleApplicantInterview: (id, payload) => http.post(`/api/company/applicants/${id}/schedule-interview`, payload),
   makeOffer: (id) => http.post(`/api/company/applicants/${id}/make-offer`),
+  // NEW: Approve and Reject application
+  approveApplicant: (id) => http.post(`/api/company/applicants/${id}/approve`),
+  rejectApplicant: (id, reason) => http.post(`/api/company/applicants/${id}/reject`, { reason }),
   getInterns: (params) => http.get(`/api/company/interns${buildQuery(params)}`),
   getIntern: (id) => http.get(`/api/company/interns/${id}`),
   evaluateIntern: (id, payload) => http.post(`/api/company/interns/${id}/evaluate`, payload),

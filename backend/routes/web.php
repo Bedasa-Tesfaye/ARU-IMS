@@ -56,14 +56,15 @@ Route::middleware('auth:web')->group(function () {
     Route::get('/advisor-dashboard', [AppController::class, 'advisorDashboard']);
     Route::get('/company-dashboard', [AppController::class, 'companyDashboard']);
 
+    // IMPORTANT: Fixed route ordering - specific routes BEFORE parameterized routes
+    Route::get('/internships/approval-queue', [InternshipController::class, 'approvalQueue']);
+    Route::post('/internships/{id}/review', [InternshipController::class, 'reviewSubmission']);
     Route::get('/internships', [InternshipController::class, 'index']);
     Route::post('/internships', [InternshipController::class, 'store']);
     Route::get('/internships/{id}', [InternshipController::class, 'show']);
     Route::put('/internships/{id}', [InternshipController::class, 'update']);
     Route::delete('/internships/{id}', [InternshipController::class, 'destroy']);
     Route::post('/internships/{id}/apply', [InternshipController::class, 'apply']);
-    Route::get('/internships/approval-queue', [InternshipController::class, 'approvalQueue']);
-    Route::post('/internships/{id}/review', [InternshipController::class, 'reviewSubmission']);
 
     Route::get('/applications', [ApplicationController::class, 'index']);
     Route::post('/applications', [ApplicationController::class, 'store']);
@@ -220,6 +221,8 @@ Route::middleware('auth:web')->group(function () {
         Route::post('/applicants/{id}/shortlist', [CompanyController::class, 'shortlistApplicant']);
         Route::post('/applicants/{id}/schedule-interview', [CompanyController::class, 'scheduleInterview']);
         Route::post('/applicants/{id}/make-offer', [CompanyController::class, 'makeOffer']);
+        Route::post('/applicants/{id}/approve', [CompanyController::class, 'approveApplication']);
+        Route::post('/applicants/{id}/reject', [CompanyController::class, 'rejectApplication']);
         Route::get('/interns', [CompanyController::class, 'interns']);
         Route::get('/interns/{id}', [CompanyController::class, 'internDetail']);
         Route::post('/interns/{id}/evaluate', [CompanyController::class, 'evaluateIntern']);
@@ -313,3 +316,5 @@ Route::middleware('auth:web')->group(function () {
         Route::post('/bias-detection', [AIExaminerController::class, 'biasDetection']);
     });
 });
+
+Route::get('/api/departments', [App\Http\Controllers\DepartmentController::class, 'index']);

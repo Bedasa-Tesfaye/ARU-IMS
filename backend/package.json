@@ -14,23 +14,23 @@
         "vite": "^4.0.0"
     },
     "dependencies": {
+        "@headlessui/react": "^2.2.7",
         "@inertiajs/inertia": "^0.11.1",
         "@inertiajs/react": "^2.3.21",
         "@vitejs/plugin-react": "^4.7.0",
-        "@headlessui/react": "^2.2.7",
         "clsx": "^2.1.1",
         "date-fns": "^4.1.0",
         "file-saver": "^2.0.5",
         "framer-motion": "^12.23.12",
+        "jsbarcode": "^3.12.3",
         "lucide-react": "^0.515.0",
         "papaparse": "^5.5.3",
+        "qrcode": "^1.5.4",
         "react": "^19.2.5",
         "react-datepicker": "^6.9.0",
         "react-dom": "^19.2.5",
         "react-hot-toast": "^2.6.0",
-        "recharts": "^2.15.3",
-        "jsbarcode": "^3.11.6",
-        "qrcode": "^1.5.4",
+        "recharts": "^2.15.4",
         "xlsx": "^0.18.5"
     }
 }

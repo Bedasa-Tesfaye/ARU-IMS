@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Department;
 use App\Models\Evaluation;
 use App\Models\Internship;
+use App\Models\Notification;
 use App\Models\StudentInterview;
 use App\Models\StudentMessage;
 use App\Models\User;
@@ -98,6 +99,116 @@ class CompanyController extends Controller
         }
 
         return 'applied';
+    }
+
+    // ============================================
+    // NEW: Approve Application
+    // ============================================
+    public function approveApplication(Request $request, $id)
+    {
+        $user = $this->companyUser($request);
+        $company = $this->companyModel($user);
+        $app = $this->applicationsQuery((int) $company->id)->findOrFail($id);
+
+        $app->update([
+            'status' => 'approved',
+            'approved_date' => now(),
+        ]);
+
+        $internship = $app->internship;
+        if ($internship) {
+            $internship->increment('current_applicants');
+        }
+
+        // Notify student
+        $student = $app->student;
+        if ($student) {
+            Notification::create([
+                'user_id' => $student->id,
+                'type' => 'application_approved',
+                'title' => 'Application Approved! 🎉',
+                'message' => "Your application for \"{$internship->title}\" at {$company->name} has been approved! You are now an intern.",
+                'meta' => [
+                    'application_id' => $app->id,
+                    'internship_id' => $internship->id,
+                    'company_id' => $company->id,
+                ],
+            ]);
+        }
+
+        // Notify super admins
+        $superAdmins = User::where('role', 'super_admin')->get();
+        foreach ($superAdmins as $admin) {
+            Notification::create([
+                'user_id' => $admin->id,
+                'type' => 'student_placed',
+                'title' => 'Student Placed',
+                'message' => ($student->first_name ?? 'Student') . " has been accepted by {$company->name} for \"{$internship->title}\"",
+                'meta' => [
+                    'application_id' => $app->id,
+                    'student_id' => $student->id,
+                    'company_id' => $company->id,
+                ],
+            ]);
+        }
+
+        // Update ATS stage
+        $ats = $this->getAtsStages($company);
+        $ats[(string) $app->id] = 'hired';
+        $this->saveAtsStages($company, $ats);
+
+        return response()->json([
+            'message' => 'Application approved successfully! Student is now an intern.',
+            'application' => $app->fresh(['student', 'internship.company']),
+        ]);
+    }
+
+    // ============================================
+    // NEW: Reject Application
+    // ============================================
+    public function rejectApplication(Request $request, $id)
+    {
+        $user = $this->companyUser($request);
+        $company = $this->companyModel($user);
+        $app = $this->applicationsQuery((int) $company->id)->findOrFail($id);
+
+        $reason = $request->input('reason');
+
+        $app->update([
+            'status' => 'rejected',
+            'rejection_reason' => $reason,
+        ]);
+
+        // Notify student
+        $student = $app->student;
+        $internship = $app->internship;
+        if ($student) {
+            $message = "Your application for \"{$internship->title}\" at {$company->name} was not selected.";
+            if ($reason) {
+                $message .= " Reason: {$reason}";
+            }
+
+            Notification::create([
+                'user_id' => $student->id,
+                'type' => 'application_rejected',
+                'title' => 'Application Update',
+                'message' => $message,
+                'meta' => [
+                    'application_id' => $app->id,
+                    'internship_id' => $internship->id,
+                ],
+            ]);
+        }
+
+        // Update ATS stage
+        $ats = $this->getAtsStages($company);
+        $ats[(string) $app->id] = 'rejected';
+        $this->saveAtsStages($company, $ats);
+
+        return response()->json([
+            'message' => 'Application rejected.',
+            'application' => $app->fresh(['student', 'internship.company']),
+        ]);
     }
 
     public function dashboardStats(Request $request)
