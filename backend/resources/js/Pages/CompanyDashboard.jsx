@@ -1388,6 +1388,61 @@ const CompanyDashboard = () => {
             </ul>
             <h4>Interview questions</h4>
             <ul>{(selectedApplicant.ai_insights?.interview_questions || []).map((q, i) => (<li key={i}>{q}</li>))}</ul>
+            <h4>Student documents</h4>
+            <div className="co-find-results">
+              {(selectedApplicant.documents_preview || []).map((d) => (
+                <div key={d.id} className="co-find-result-row">
+                  <div>
+                    <strong>{d.title}</strong>
+                    <div className="co-muted">{d.type} · v{d.version || 1}</div>
+                  </div>
+                  <div className="co-find-result-actions">
+                    <button
+                      type="button"
+                      className="co-btn ghost co-btn-sm"
+                      onClick={async () => {
+                        try {
+                          const res = await companyAPI.viewDocumentFile(d.id);
+                          const type = res.headers?.['content-type'] || 'application/octet-stream';
+                          const blob = new Blob([res.data], { type });
+                          const url = URL.createObjectURL(blob);
+                          window.open(url, '_blank', 'noopener,noreferrer');
+                          setTimeout(() => URL.revokeObjectURL(url), 3000);
+                        } catch {
+                          showToast('Preview not available.', 'error');
+                        }
+                      }}
+                    >
+                      Preview
+                    </button>
+                    <button
+                      type="button"
+                      className="co-btn ghost co-btn-sm"
+                      onClick={async () => {
+                        try {
+                          const res = await companyAPI.downloadDocument(d.id);
+                          const type = res.headers?.['content-type'] || 'application/octet-stream';
+                          const blob = new Blob([res.data], { type });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${(d.title || 'document').replace(/\s+/g, '_')}`;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          setTimeout(() => URL.revokeObjectURL(url), 0);
+                        } catch {
+                          showToast('Download failed.', 'error');
+                        }
+                      }}
+                    >
+                      Download
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {!(selectedApplicant.documents_preview || []).length && <div className="co-muted">No uploaded documents.</div>}
+            </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
               <button
                 type="button"

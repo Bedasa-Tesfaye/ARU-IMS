@@ -3,14 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\Application;
+use App\Models\DashboardReportRun;
 use App\Models\ExaminerMessage;
 use App\Models\ExaminerReportEvaluation;
 use App\Models\ExaminerSetting;
 use App\Models\ExaminerVivaSession;
 use App\Models\Report;
+use App\Models\StudentDocument;
 use App\Models\User;
+use App\Services\ScheduleNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class ExaminerController extends Controller
@@ -99,6 +103,18 @@ class ExaminerController extends Controller
         $student = User::query()->where('role', 'student')->where('department_id', $examiner->department_id)->findOrFail($id);
         $deliverables = Report::query()->whereHas('application', fn ($q) => $q->where('student_id', $student->id))->get();
         return response()->json($deliverables);
+    }
+
+    public function studentDocuments(Request $request, int $id)
+    {
+        $examiner = $this->examiner($request);
+        User::query()->where('role', 'student')->where('department_id', $examiner->department_id)->findOrFail($id);
+        return response()->json(
+            StudentDocument::query()
+                ->where('student_id', $id)
+                ->orderByDesc('updated_at')
+                ->get(['id', 'student_id', 'type', 'title', 'file_path', 'version', 'updated_at'])
+        );
     }
 
     public function studentEvaluationHistory(Request $request, int $id)
@@ -232,7 +248,107 @@ class ExaminerController extends Controller
             'format' => $validated['format'] ?? 'virtual',
             'ai_questions' => ['Explain your core internship project outcome.', 'What challenge did you solve and how?'],
         ]);
+
+        $notifier = app(ScheduleNotificationService::class);
+        $notifier->notifyStudent(
+            (int) $validated['student_id'],
+            'scheduled',
+            'Viva session scheduled',
+            sprintf(
+                "Your examiner scheduled a viva / oral defense session.\n\nExaminer: %s\nWhen: %s\nFormat: %s\nRoom/Link: %s",
+                (string) ($examiner->full_name ?? 'Examiner'),
+                $notifier->formatWhen($session->scheduled_at),
+                (string) ($session->format ?? 'virtual'),
+                (string) ($session->room_or_link ?? '—')
+            ),
+            [
+                'event_type' => 'examiner_viva',
+                'event_id' => (int) $session->id,
+                'scheduled_at' => $session->scheduled_at?->toIso8601String(),
+                'examiner_id' => (int) $examiner->id,
+            ],
+            'examiner-' . ((int) $examiner->id) . '-' . ((int) $validated['student_id']),
+            (string) ($examiner->full_name ?? 'Examiner'),
+            $examiner->email ? (string) $examiner->email : null,
+            'urgent',
+            'urgent'
+        );
+
         return response()->json(['message' => 'Viva scheduled.', 'session' => $session], 201);
+    }
+
+    public function updateVivaSchedule(Request $request, int $id)
+    {
+        $examiner = $this->examiner($request);
+        $session = ExaminerVivaSession::query()->where('examiner_id', $examiner->id)->findOrFail($id);
+
+        $validated = Validator::make($request->all(), [
+            'scheduled_at' => 'sometimes|date',
+            'format' => 'sometimes|in:virtual,in_person,phone',
+            'room_or_link' => 'sometimes|string|nullable|max:255',
+        ])->validate();
+
+        $session->update($validated);
+
+        $notifier = app(ScheduleNotificationService::class);
+        $notifier->notifyStudent(
+            (int) $session->student_id,
+            'updated',
+            'Viva session updated',
+            sprintf(
+                "Your viva / oral defense session was updated.\n\nExaminer: %s\nWhen: %s\nFormat: %s\nRoom/Link: %s",
+                (string) ($examiner->full_name ?? 'Examiner'),
+                $notifier->formatWhen($session->scheduled_at),
+                (string) ($session->format ?? 'virtual'),
+                (string) ($session->room_or_link ?? '—')
+            ),
+            [
+                'event_type' => 'examiner_viva',
+                'event_id' => (int) $session->id,
+                'scheduled_at' => $session->scheduled_at?->toIso8601String(),
+                'examiner_id' => (int) $examiner->id,
+            ],
+            'examiner-' . ((int) $examiner->id) . '-' . ((int) $session->student_id),
+            (string) ($examiner->full_name ?? 'Examiner'),
+            $examiner->email ? (string) $examiner->email : null,
+            'follow_up',
+            'neutral'
+        );
+
+        return response()->json(['message' => 'Viva updated.', 'session' => $session->fresh()]);
+    }
+
+    public function cancelVivaSchedule(Request $request, int $id)
+    {
+        $examiner = $this->examiner($request);
+        $session = ExaminerVivaSession::query()->where('examiner_id', $examiner->id)->findOrFail($id);
+
+        $session->update(['status' => 'cancelled']);
+
+        $notifier = app(ScheduleNotificationService::class);
+        $notifier->notifyStudent(
+            (int) $session->student_id,
+            'cancelled',
+            'Viva session cancelled',
+            sprintf(
+                "A viva / oral defense session was cancelled.\n\nExaminer: %s\nWas scheduled for: %s\n\nYou will be contacted to reschedule if needed.",
+                (string) ($examiner->full_name ?? 'Examiner'),
+                $session->scheduled_at ? $notifier->formatWhen($session->scheduled_at) : '—'
+            ),
+            [
+                'event_type' => 'examiner_viva',
+                'event_id' => (int) $session->id,
+                'scheduled_at' => $session->scheduled_at?->toIso8601String(),
+                'examiner_id' => (int) $examiner->id,
+            ],
+            'examiner-' . ((int) $examiner->id) . '-' . ((int) $session->student_id),
+            (string) ($examiner->full_name ?? 'Examiner'),
+            $examiner->email ? (string) $examiner->email : null,
+            'urgent',
+            'urgent'
+        );
+
+        return response()->json(['message' => 'Viva cancelled.', 'session' => $session->fresh()]);
     }
 
     public function recordVivaResults(Request $request, int $id)
@@ -262,6 +378,46 @@ class ExaminerController extends Controller
                 'Describe a technical challenge and your resolution approach.',
                 'How would you improve your solution in production conditions?',
             ],
+        ]);
+    }
+
+    public function viewDocumentFile(Request $request, int $id)
+    {
+        $examiner = $this->examiner($request);
+        $doc = StudentDocument::query()->findOrFail($id);
+        User::query()
+            ->where('id', $doc->student_id)
+            ->where('role', 'student')
+            ->where('department_id', $examiner->department_id)
+            ->firstOrFail();
+        abort_unless($doc->file_path, 404, 'File not found.');
+        abort_unless(Storage::disk('public')->exists($doc->file_path), 404, 'File not found.');
+        return Storage::disk('public')->response($doc->file_path);
+    }
+
+    public function downloadDocument(Request $request, int $id)
+    {
+        $examiner = $this->examiner($request);
+        $doc = StudentDocument::query()->findOrFail($id);
+        User::query()
+            ->where('id', $doc->student_id)
+            ->where('role', 'student')
+            ->where('department_id', $examiner->department_id)
+            ->firstOrFail();
+
+        if ($doc->file_path && Storage::disk('public')->exists($doc->file_path)) {
+            $downloadName = preg_replace('/[^a-z0-9\-_]+/i', '_', strtolower($doc->title));
+            $ext = pathinfo($doc->file_path, PATHINFO_EXTENSION);
+            $ext = $ext ? ".{$ext}" : '';
+            return Storage::disk('public')->download($doc->file_path, $downloadName . $ext);
+        }
+
+        $filename = preg_replace('/[^a-z0-9\-_]+/i', '_', strtolower($doc->title)) . '.txt';
+        $content = $doc->content ?: "Title: {$doc->title}\nType: {$doc->type}\nNo content.";
+
+        return response($content, 200, [
+            'Content-Type' => 'text/plain; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ]);
     }
 
@@ -299,12 +455,26 @@ class ExaminerController extends Controller
     {
         $examiner = $this->examiner($request);
         $evaluations = ExaminerReportEvaluation::query()->where('examiner_id', $examiner->id)->get();
+        $completed = $evaluations->whereNotNull('evaluated_at');
+        $avgTurnaround = $completed->count()
+            ? round($completed->avg(function ($item) {
+                if (!$item->evaluated_at || !$item->created_at) {
+                    return null;
+                }
+                return $item->evaluated_at->diffInDays($item->created_at);
+            }) ?: 0, 1)
+            : 0;
+        $gradeDist = $evaluations->whereNotNull('grade')->groupBy('grade')->map->count();
+        $modeCount = $gradeDist->max() ?: 0;
+        $consistency = $evaluations->count() > 0
+            ? round(($modeCount / max(1, $evaluations->whereNotNull('grade')->count())) * 100, 1)
+            : 0;
         return response()->json([
             'metrics' => [
-                'completed_evaluations' => $evaluations->whereNotNull('evaluated_at')->count(),
-                'avg_turnaround_days' => 3.2,
+                'completed_evaluations' => $completed->count(),
+                'avg_turnaround_days' => $avgTurnaround,
                 'avg_score' => round((float) ($evaluations->avg('overall_score') ?: 0), 1),
-                'grade_consistency' => 92,
+                'grade_consistency' => $consistency,
             ],
             'insights' => [
                 'Evaluation completion rate is on track for this semester.',
@@ -316,12 +486,39 @@ class ExaminerController extends Controller
 
     public function generateAnalyticsReport(Request $request)
     {
-        $this->examiner($request);
+        $examiner = $this->examiner($request);
+        $evaluations = ExaminerReportEvaluation::query()->where('examiner_id', $examiner->id)->get();
+        $avgScore = round((float) ($evaluations->avg('overall_score') ?: 0), 1);
+        $completed = $evaluations->whereNotNull('evaluated_at')->count();
+        $pending = $evaluations->where('status', 'pending')->count();
+
+        $payload = [
+            'metrics' => [
+                'total_evaluations' => $evaluations->count(),
+                'completed_evaluations' => $completed,
+                'pending_evaluations' => $pending,
+                'avg_score' => $avgScore,
+            ],
+            'summary' => 'Evaluation throughput is healthy with strong consistency and timely completion.',
+        ];
+
+        $run = DashboardReportRun::query()->create([
+            'module' => 'examiner',
+            'owner_user_id' => $examiner->id,
+            'report_type' => 'analytics',
+            'title' => 'Examiner Performance & Cohort Report',
+            'status' => 'completed',
+            'payload' => $payload,
+            'generated_at' => now(),
+        ]);
+
         return response()->json([
             'report' => [
-                'title' => 'Examiner Performance & Cohort Report',
-                'generated_at' => now()->toIso8601String(),
-                'summary' => 'Evaluation throughput is healthy with strong consistency and timely completion.',
+                'id' => $run->id,
+                'title' => $run->title,
+                'generated_at' => optional($run->generated_at)->toIso8601String(),
+                'summary' => $payload['summary'],
+                'metrics' => $payload['metrics'],
             ],
         ]);
     }

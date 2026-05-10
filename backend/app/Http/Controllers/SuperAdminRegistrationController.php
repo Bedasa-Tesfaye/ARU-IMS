@@ -536,9 +536,16 @@ class SuperAdminRegistrationController extends Controller
     public function resetUserPassword(Request $request, int $id)
     {
         $this->ensureSuperAdmin($request);
+        $validated = Validator::make($request->all(), [
+            'reveal_password' => 'sometimes|boolean',
+        ])->validate();
+
         $user = User::query()->findOrFail($id);
         $policy = $this->credentialService->getPolicy();
         $plainPassword = $this->credentialService->generatePassword($policy);
+        $revealPassword = array_key_exists('reveal_password', $validated)
+            ? (bool) $validated['reveal_password']
+            : true;
         $user->update([
             'password' => Hash::make($plainPassword, ['rounds' => 12]),
             'password_changed_at' => now(),
@@ -549,6 +556,7 @@ class SuperAdminRegistrationController extends Controller
         $this->logAudit($request, 'credentials', 'reset_password', 'warning', "Password reset for {$user->email}", [
             'user_id' => $user->id,
             'email' => $user->email,
+            'plaintext_revealed' => $revealPassword,
         ], $user->id);
 
         return response()->json([
@@ -556,8 +564,12 @@ class SuperAdminRegistrationController extends Controller
             'credentials' => [
                 'name' => $user->full_name,
                 'email' => $user->email,
-                'password' => $plainPassword,
+                'password' => $revealPassword ? $plainPassword : null,
                 'password_expires_at' => optional($user->password_expires_at)->toIso8601String(),
+                'password_revealed' => $revealPassword,
+                'delivery_hint' => $revealPassword
+                    ? 'Deliver this temporary password securely and ask the user to change it at first login.'
+                    : 'Call this endpoint with reveal_password=true only when a supervised credential handoff is required.',
             ],
         ]);
     }

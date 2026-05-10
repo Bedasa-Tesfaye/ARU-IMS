@@ -8,6 +8,7 @@ import StudentCard from './examiner/components/StudentCard';
 import EvaluationForm from './examiner/components/EvaluationForm';
 import Modal from './examiner/components/Modal';
 import './examiner/ExaminerDashboard.css';
+import { downloadIcs } from '../utils/ics';
 
 const NAV = [
   { id: 'overview', label: 'Dashboard', icon: '📊' },
@@ -92,6 +93,7 @@ const ExaminerDashboard = () => {
   const [error, setError] = useState('');
   const [draft, setDraft] = useState({ report_type: 'campus' });
   const [studentAppsForEval, setStudentAppsForEval] = useState([]);
+  const [studentDocsForEval, setStudentDocsForEval] = useState([]);
   const [aiInput, setAiInput] = useState('');
   const [aiChat, setAiChat] = useState([
     { role: 'ai', text: 'Examiner AI assistant is ready. Ask for feedback drafting, consistency checks, or viva question banks.' },
@@ -200,18 +202,22 @@ const ExaminerDashboard = () => {
     const sid = draft.student_id;
     if (!sid) {
       setStudentAppsForEval([]);
+      setStudentDocsForEval([]);
       return;
     }
     let cancelled = false;
-    examinerAPI
-      .getStudentDetail(sid)
-      .then((res) => {
+    Promise.all([examinerAPI.getStudentDetail(sid), examinerAPI.getStudentDocuments(sid)])
+      .then(([detailRes, docsRes]) => {
         if (cancelled) return;
-        const apps = res.data?.applications || [];
+        const apps = detailRes.data?.applications || [];
         setStudentAppsForEval(apps);
+        setStudentDocsForEval(Array.isArray(docsRes.data) ? docsRes.data : []);
       })
       .catch(() => {
-        if (!cancelled) setStudentAppsForEval([]);
+        if (!cancelled) {
+          setStudentAppsForEval([]);
+          setStudentDocsForEval([]);
+        }
       });
     return () => {
       cancelled = true;
@@ -569,7 +575,63 @@ const ExaminerDashboard = () => {
     <section className="three-panel">
       <article className="examiner-card">
         <h4>📄 Report Viewer</h4>
-        <div className="report-viewer">Student report preview content area</div>
+        <div className="report-viewer">
+          {!draft.student_id && <div>Select a student to view uploaded documents.</div>}
+          {draft.student_id && (
+            <div className="task-list">
+              {studentDocsForEval.map((d) => (
+                <div key={d.id} className="task-item">
+                  <strong>{d.title}</strong>
+                  <small>{d.type} · version {d.version || 1}</small>
+                  <div className="queue-actions">
+                    <button
+                      type="button"
+                      className="examiner-btn secondary"
+                      onClick={async () => {
+                        try {
+                          const res = await examinerAPI.viewDocumentFile(d.id);
+                          const type = res.headers?.['content-type'] || 'application/octet-stream';
+                          const blob = new Blob([res.data], { type });
+                          const url = URL.createObjectURL(blob);
+                          window.open(url, '_blank', 'noopener,noreferrer');
+                          setTimeout(() => URL.revokeObjectURL(url), 3000);
+                        } catch {
+                          showToast('Preview not available.', 'error');
+                        }
+                      }}
+                    >
+                      Preview
+                    </button>
+                    <button
+                      type="button"
+                      className="examiner-btn"
+                      onClick={async () => {
+                        try {
+                          const res = await examinerAPI.downloadDocument(d.id);
+                          const type = res.headers?.['content-type'] || 'application/octet-stream';
+                          const blob = new Blob([res.data], { type });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${(d.title || 'document').replace(/\s+/g, '_')}`;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          setTimeout(() => URL.revokeObjectURL(url), 0);
+                        } catch {
+                          showToast('Download failed.', 'error');
+                        }
+                      }}
+                    >
+                      Download
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {!!draft.student_id && !studentDocsForEval.length && <div className="empty-state">No uploaded documents for this student.</div>}
+            </div>
+          )}
+        </div>
       </article>
       <article className="examiner-card">
         <h4>🤖 AI Analysis</h4>
@@ -709,7 +771,66 @@ const ExaminerDashboard = () => {
       <article className="examiner-card">
         <h3>📋 Events on {selectedScheduleDate.toDateString()}</h3>
         <ul className="timeline">
-          {selectedDateEvents.map((v) => <li key={v.id}>🔴 Viva for Student #{v.student_id} - {new Date(v.scheduled_at).toLocaleTimeString()}</li>)}
+          {selectedDateEvents.map((v) => (
+            <li key={v.id} style={{ display: 'grid', gap: 8 }}>
+              <div>
+                🔴 Viva for Student #{v.student_id} — {new Date(v.scheduled_at).toLocaleTimeString()} ({v.format || 'virtual'})
+              </div>
+              <div className="queue-actions" style={{ marginTop: 0 }}>
+                <button
+                  type="button"
+                  className="examiner-btn secondary"
+                  onClick={() =>
+                    downloadIcs({
+                      filename: `viva-${v.id}.ics`,
+                      title: `Viva session (Student #${v.student_id})`,
+                      description: v.room_or_link ? `Room/Link: ${v.room_or_link}` : '',
+                      start: v.scheduled_at,
+                      end: new Date(new Date(v.scheduled_at).getTime() + 60 * 60 * 1000),
+                      location: v.room_or_link || '',
+                    })
+                  }
+                >
+                  Export ICS
+                </button>
+                <button
+                  type="button"
+                  className="examiner-btn"
+                  onClick={async () => {
+                    const local = new Date(new Date(v.scheduled_at).getTime() - new Date(v.scheduled_at).getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                    const next = window.prompt('New date/time (YYYY-MM-DDTHH:mm)', local);
+                    if (!next) return;
+                    try {
+                      await examinerAPI.updateVivaSchedule(v.id, { scheduled_at: next });
+                      showToast('Viva updated.');
+                      loadAll();
+                    } catch {
+                      showToast('Failed to update viva.', 'error');
+                    }
+                  }}
+                >
+                  Reschedule
+                </button>
+                <button
+                  type="button"
+                  className="examiner-btn"
+                  style={{ background: '#dc2626' }}
+                  onClick={async () => {
+                    if (!window.confirm('Cancel this viva session?')) return;
+                    try {
+                      await examinerAPI.cancelVivaSchedule(v.id);
+                      showToast('Viva cancelled.');
+                      loadAll();
+                    } catch {
+                      showToast('Failed to cancel viva.', 'error');
+                    }
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </li>
+          ))}
           {!selectedDateEvents.length && <li>No events scheduled on this date.</li>}
         </ul>
       </article>

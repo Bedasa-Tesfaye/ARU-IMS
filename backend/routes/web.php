@@ -209,11 +209,14 @@ Route::middleware('auth:web')->group(function () {
         Route::get('/meetings', [AdvisorController::class, 'meetings']);
         Route::post('/meetings', [AdvisorController::class, 'storeMeeting']);
         Route::put('/meetings/{id}', [AdvisorController::class, 'updateMeeting']);
+        Route::delete('/meetings/{id}', [AdvisorController::class, 'destroyMeeting']);
         Route::get('/meetings/{id}/summary', [AdvisorController::class, 'meetingSummary']);
         Route::get('/messages', [AdvisorController::class, 'messages']);
         Route::post('/messages/send', [AdvisorController::class, 'sendMessage']);
         Route::get('/documents/review', [AdvisorController::class, 'documentsReviewQueue']);
         Route::post('/documents/{id}/feedback', [AdvisorController::class, 'documentFeedback']);
+        Route::get('/documents/{id}/file', [AdvisorController::class, 'viewDocumentFile']);
+        Route::get('/documents/{id}/download', [AdvisorController::class, 'downloadDocument']);
         Route::get('/progress', [AdvisorController::class, 'progress']);
         Route::get('/reports', [AdvisorController::class, 'reports']);
         Route::post('/reports/generate', [AdvisorController::class, 'generateReport']);
@@ -250,8 +253,12 @@ Route::middleware('auth:web')->group(function () {
         Route::post('/messages/send', [CompanyController::class, 'sendMessage']);
         Route::put('/messages/{id}/read', [CompanyController::class, 'markMessageRead']);
         Route::get('/messages/{id}/attachment', [CompanyController::class, 'viewMessageAttachment'])->name('company.message.attachment');
+        Route::get('/documents/{id}/file', [CompanyController::class, 'viewDocumentFile']);
+        Route::get('/documents/{id}/download', [CompanyController::class, 'downloadDocument']);
         Route::get('/schedule', [CompanyController::class, 'schedule']);
         Route::post('/schedule', [CompanyController::class, 'storeSchedule']);
+        Route::put('/schedule/{id}', [CompanyController::class, 'updateSchedule']);
+        Route::delete('/schedule/{id}', [CompanyController::class, 'destroySchedule']);
         Route::get('/analytics', [CompanyController::class, 'analytics']);
         Route::post('/reports/generate', [CompanyController::class, 'generateReport']);
         Route::get('/team', [CompanyController::class, 'team']);
@@ -298,6 +305,7 @@ Route::middleware('auth:web')->group(function () {
         Route::get('/dashboard/stats', [ExaminerController::class, 'dashboardStats']);
         Route::get('/students', [ExaminerController::class, 'students']);
         Route::get('/students/{id}', [ExaminerController::class, 'studentDetail']);
+        Route::get('/students/{id}/documents', [ExaminerController::class, 'studentDocuments']);
         Route::get('/students/{id}/deliverables', [ExaminerController::class, 'studentDeliverables']);
         Route::get('/students/{id}/evaluation-history', [ExaminerController::class, 'studentEvaluationHistory']);
         Route::get('/evaluation-queue', [ExaminerController::class, 'evaluationQueue']);
@@ -306,6 +314,8 @@ Route::middleware('auth:web')->group(function () {
         Route::post('/evaluate/request-revision', [ExaminerController::class, 'requestRevision']);
         Route::get('/viva/schedule', [ExaminerController::class, 'vivaSchedule']);
         Route::post('/viva/schedule', [ExaminerController::class, 'createVivaSchedule']);
+        Route::put('/viva/{id}', [ExaminerController::class, 'updateVivaSchedule']);
+        Route::post('/viva/{id}/cancel', [ExaminerController::class, 'cancelVivaSchedule']);
         Route::put('/viva/{id}/record-results', [ExaminerController::class, 'recordVivaResults']);
         Route::post('/viva/generate-questions', [ExaminerController::class, 'generateVivaQuestions']);
         Route::get('/grades', [ExaminerController::class, 'grades']);
@@ -316,6 +326,8 @@ Route::middleware('auth:web')->group(function () {
         Route::get('/reports/export', [ExaminerController::class, 'exportAnalyticsReport']);
         Route::get('/messages', [ExaminerController::class, 'messages']);
         Route::post('/messages', [ExaminerController::class, 'sendMessage']);
+        Route::get('/documents/{id}/file', [ExaminerController::class, 'viewDocumentFile']);
+        Route::get('/documents/{id}/download', [ExaminerController::class, 'downloadDocument']);
         Route::get('/settings', [ExaminerController::class, 'settings']);
         Route::put('/settings', [ExaminerController::class, 'updateSettings']);
         Route::put('/profile', [ExaminerController::class, 'updateProfile']);

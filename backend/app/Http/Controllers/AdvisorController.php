@@ -3,14 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\Application;
+use App\Models\DashboardReportRun;
 use App\Models\Department;
 use App\Models\StudentDocument;
 use App\Models\StudentInterview;
 use App\Models\StudentMessage;
 use App\Models\User;
+use App\Services\ScheduleNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class AdvisorController extends Controller
@@ -532,6 +535,31 @@ class AdvisorController extends Controller
             'notes' => $validated['notes'] ?? '',
         ]);
 
+        $notifier = app(ScheduleNotificationService::class);
+        $notifier->notifyStudent(
+            (int) $validated['student_id'],
+            'scheduled',
+            'Advisor meeting scheduled',
+            sprintf(
+                "Your advisor scheduled a meeting.\n\nAdvisor: %s\nWhen: %s\nFormat: %s\n\nNotes: %s",
+                (string) ($advisor->full_name ?? 'Advisor'),
+                $notifier->formatWhen($meeting->scheduled_at),
+                (string) ($meeting->format ?? 'video'),
+                (string) ($meeting->notes ?? '—')
+            ),
+            [
+                'event_type' => 'advisor_meeting',
+                'event_id' => (int) $meeting->id,
+                'scheduled_at' => $meeting->scheduled_at?->toIso8601String(),
+                'advisor_id' => (int) $advisor->id,
+            ],
+            'advisor-' . ((int) $advisor->id) . '-' . ((int) $validated['student_id']),
+            (string) ($advisor->full_name ?? 'Advisor'),
+            $advisor->email ? (string) $advisor->email : null,
+            'general',
+            'neutral'
+        );
+
         return response()->json(['message' => 'Meeting scheduled.', 'meeting' => $meeting], 201);
     }
 
@@ -549,7 +577,70 @@ class AdvisorController extends Controller
 
         $meeting->update($validated);
 
+        if (array_key_exists('scheduled_at', $validated) || array_key_exists('format', $validated) || array_key_exists('notes', $validated)) {
+            $notifier = app(ScheduleNotificationService::class);
+            $notifier->notifyStudent(
+                (int) $meeting->student_id,
+                'updated',
+                'Advisor meeting updated',
+                sprintf(
+                    "Your advisor updated a scheduled meeting.\n\nAdvisor: %s\nWhen: %s\nFormat: %s\n\nNotes: %s",
+                    (string) ($advisor->full_name ?? 'Advisor'),
+                    $notifier->formatWhen($meeting->scheduled_at),
+                    (string) ($meeting->format ?? 'video'),
+                    (string) ($meeting->notes ?? '—')
+                ),
+                [
+                    'event_type' => 'advisor_meeting',
+                    'event_id' => (int) $meeting->id,
+                    'scheduled_at' => $meeting->scheduled_at?->toIso8601String(),
+                    'advisor_id' => (int) $advisor->id,
+                ],
+                'advisor-' . ((int) $advisor->id) . '-' . ((int) $meeting->student_id),
+                (string) ($advisor->full_name ?? 'Advisor'),
+                $advisor->email ? (string) $advisor->email : null,
+                'follow_up',
+                'neutral'
+            );
+        }
+
         return response()->json(['message' => 'Meeting updated.', 'meeting' => $meeting]);
+    }
+
+    public function destroyMeeting(Request $request, int $id)
+    {
+        $advisor = $this->advisor($request);
+        $ids = $this->studentScopeIds($advisor);
+        $meeting = StudentInterview::query()->whereIn('student_id', $ids->all())->findOrFail($id);
+
+        $studentId = (int) $meeting->student_id;
+        $when = $meeting->scheduled_at;
+        $meeting->delete();
+
+        $notifier = app(ScheduleNotificationService::class);
+        $notifier->notifyStudent(
+            $studentId,
+            'cancelled',
+            'Advisor meeting cancelled',
+            sprintf(
+                "Your advisor cancelled a scheduled meeting.\n\nAdvisor: %s\nWas scheduled for: %s\n\nYou can request a new time from Messages.",
+                (string) ($advisor->full_name ?? 'Advisor'),
+                $when ? $notifier->formatWhen($when) : '—'
+            ),
+            [
+                'event_type' => 'advisor_meeting',
+                'event_id' => (int) $id,
+                'scheduled_at' => $when?->toIso8601String(),
+                'advisor_id' => (int) $advisor->id,
+            ],
+            'advisor-' . ((int) $advisor->id) . '-' . $studentId,
+            (string) ($advisor->full_name ?? 'Advisor'),
+            $advisor->email ? (string) $advisor->email : null,
+            'urgent',
+            'urgent'
+        );
+
+        return response()->json(['message' => 'Meeting cancelled.']);
     }
 
     public function meetingSummary(Request $request, int $id)
@@ -641,6 +732,38 @@ class AdvisorController extends Controller
         return response()->json(['message' => 'Feedback saved.', 'document' => $doc]);
     }
 
+    public function viewDocumentFile(Request $request, int $id)
+    {
+        $advisor = $this->advisor($request);
+        $ids = $this->studentScopeIds($advisor);
+        $doc = StudentDocument::query()->whereIn('student_id', $ids->all())->findOrFail($id);
+        abort_unless($doc->file_path, 404, 'File not found.');
+        abort_unless(Storage::disk('public')->exists($doc->file_path), 404, 'File not found.');
+        return Storage::disk('public')->response($doc->file_path);
+    }
+
+    public function downloadDocument(Request $request, int $id)
+    {
+        $advisor = $this->advisor($request);
+        $ids = $this->studentScopeIds($advisor);
+        $doc = StudentDocument::query()->whereIn('student_id', $ids->all())->findOrFail($id);
+
+        if ($doc->file_path && Storage::disk('public')->exists($doc->file_path)) {
+            $downloadName = preg_replace('/[^a-z0-9\-_]+/i', '_', strtolower($doc->title));
+            $ext = pathinfo($doc->file_path, PATHINFO_EXTENSION);
+            $ext = $ext ? ".{$ext}" : '';
+            return Storage::disk('public')->download($doc->file_path, $downloadName . $ext);
+        }
+
+        $filename = preg_replace('/[^a-z0-9\-_]+/i', '_', strtolower($doc->title)) . '.txt';
+        $content = $doc->content ?: "Title: {$doc->title}\nType: {$doc->type}\nNo content.";
+
+        return response($content, 200, [
+            'Content-Type' => 'text/plain; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
+    }
+
     public function progress(Request $request)
     {
         $advisor = $this->advisor($request);
@@ -676,14 +799,38 @@ class AdvisorController extends Controller
     {
         $advisor = $this->advisor($request);
         $ids = $this->studentScopeIds($advisor);
+        $applications = Application::query()->whereIn('student_id', $ids->all())->get();
+        $placedStudents = $applications->where('status', 'approved')->pluck('student_id')->unique()->count();
+        $placementRate = $ids->count() > 0 ? round($placedStudents / $ids->count(), 2) : 0;
+        $meetings = StudentInterview::query()
+            ->whereIn('student_id', $ids->all())
+            ->where('company_name', 'Advisor Meeting')
+            ->get();
+        $attendanceRate = $meetings->count() > 0
+            ? round($meetings->whereNotNull('post_interview_feedback')->count() / $meetings->count(), 2)
+            : 0;
+        $avgResponseHours = $meetings->count() > 0
+            ? round((float) $meetings->avg(function ($m) {
+                if (!$m->created_at || !$m->scheduled_at) {
+                    return null;
+                }
+                return $m->created_at->diffInHours($m->scheduled_at, false);
+            }), 1)
+            : 0;
+        $latestRuns = DashboardReportRun::query()
+            ->where('module', 'advisor')
+            ->where('owner_user_id', $advisor->id)
+            ->orderByDesc('id')
+            ->limit(8)
+            ->get(['id', 'report_type', 'title', 'status', 'generated_at']);
 
         return response()->json([
             'advisor_id' => $advisor->id,
             'cohort_size' => $ids->count(),
-            'placement_rate' => 0.78,
-            'avg_response_hours' => 4.2,
-            'student_satisfaction' => 4.7,
-            'meeting_attendance_rate' => 0.91,
+            'placement_rate' => $placementRate,
+            'avg_response_hours' => $avgResponseHours,
+            'student_satisfaction' => round(min(5, 2.5 + ($placementRate * 2.5)), 1),
+            'meeting_attendance_rate' => $attendanceRate,
             'exports_available' => ['pdf', 'csv', 'xlsx'],
             'placement_by_type' => [
                 ['label' => 'Industry', 'value' => 62],
@@ -699,6 +846,7 @@ class AdvisorController extends Controller
                 'Students who complete mock interviews show 45% higher placement success.',
                 'Peak application activity: Tuesday mornings (based on cohort timestamps).',
             ],
+            'generated_reports' => $latestRuns,
         ]);
     }
 
@@ -714,7 +862,41 @@ class AdvisorController extends Controller
             abort_unless($this->canAccessStudent($advisor, (int) $request->input('student_id')), 403);
         }
 
-        return response()->json(['message' => 'Report generation queued (demo).', 'download_url' => null]);
+        $scopeIds = $this->studentScopeIds($advisor);
+        $appQuery = Application::query()->whereIn('student_id', $scopeIds->all());
+        if ($request->filled('student_id')) {
+            $appQuery->where('student_id', (int) $request->input('student_id'));
+        }
+        $apps = $appQuery->get();
+
+        $payload = [
+            'cohort_size' => $scopeIds->count(),
+            'report_scope_size' => $request->filled('student_id') ? 1 : $scopeIds->count(),
+            'applications' => [
+                'total' => $apps->count(),
+                'approved' => $apps->where('status', 'approved')->count(),
+                'pending' => $apps->where('status', 'pending')->count(),
+                'rejected' => $apps->where('status', 'rejected')->count(),
+            ],
+        ];
+
+        $run = DashboardReportRun::query()->create([
+            'module' => 'advisor',
+            'owner_user_id' => $advisor->id,
+            'report_type' => (string) $request->input('type'),
+            'title' => 'Advisor ' . ucfirst((string) $request->input('type')) . ' report',
+            'status' => 'completed',
+            'filters' => [
+                'student_id' => $request->input('student_id'),
+            ],
+            'payload' => $payload,
+            'generated_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Report generated successfully.',
+            'report' => $run,
+        ]);
     }
 
     public function settings(Request $request)

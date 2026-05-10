@@ -38,6 +38,47 @@ export default function DocumentReviews({
                 </button>
                 <button
                   type="button"
+                  className="adv-btn ghost adv-btn-sm"
+                  onClick={async () => {
+                    try {
+                      const res = await advisorAPI.viewDocumentFile(d.id);
+                      const type = res.headers?.['content-type'] || 'application/octet-stream';
+                      const blob = new Blob([res.data], { type });
+                      const url = URL.createObjectURL(blob);
+                      window.open(url, '_blank', 'noopener,noreferrer');
+                      setTimeout(() => URL.revokeObjectURL(url), 3000);
+                    } catch {
+                      showToast('Preview not available.', 'error');
+                    }
+                  }}
+                >
+                  Preview
+                </button>
+                <button
+                  type="button"
+                  className="adv-btn ghost adv-btn-sm"
+                  onClick={async () => {
+                    try {
+                      const res = await advisorAPI.downloadDocument(d.id);
+                      const type = res.headers?.['content-type'] || 'application/octet-stream';
+                      const blob = new Blob([res.data], { type });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `${(d.title || 'document').replace(/\s+/g, '_')}`;
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      setTimeout(() => URL.revokeObjectURL(url), 0);
+                    } catch {
+                      showToast('Download failed.', 'error');
+                    }
+                  }}
+                >
+                  Download
+                </button>
+                <button
+                  type="button"
                   className="adv-btn adv-btn-sm"
                   onClick={async () => {
                     await advisorAPI.documentFeedback(d.id, { feedback: 'Please tighten summary and add metrics.', status: 'revision_requested' });

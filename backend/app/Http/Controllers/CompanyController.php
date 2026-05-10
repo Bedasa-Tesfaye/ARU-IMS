@@ -4,13 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\Application;
 use App\Models\Company;
+use App\Models\DashboardAuditEvent;
+use App\Models\DashboardReportRun;
 use App\Models\Department;
 use App\Models\Evaluation;
 use App\Models\Internship;
 use App\Models\Notification;
+use App\Models\StudentDocument;
 use App\Models\StudentInterview;
 use App\Models\StudentMessage;
 use App\Models\User;
+use App\Services\ScheduleNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
@@ -763,6 +767,11 @@ class CompanyController extends Controller
         return response()->json([
             'application' => $app,
             'pipeline_stage' => $this->inferPipelineStage($app, $ats),
+            'documents_preview' => StudentDocument::query()
+                ->where('student_id', (int) $app->student_id)
+                ->orderByDesc('updated_at')
+                ->take(8)
+                ->get(['id', 'student_id', 'type', 'title', 'file_path', 'version', 'updated_at']),
             'ai_insights' => [
                 'skills_match' => 88,
                 'experience_match' => 82,
@@ -774,6 +783,40 @@ class CompanyController extends Controller
                     'How do you prioritize competing deadlines?',
                 ],
             ],
+        ]);
+    }
+
+    public function viewDocumentFile(Request $request, int $id)
+    {
+        $user = $this->companyUser($request);
+        $cid = (int) $user->company_id;
+        $studentIds = $this->applicationsQuery($cid)->pluck('student_id')->unique();
+        $doc = StudentDocument::query()->whereIn('student_id', $studentIds->all())->findOrFail($id);
+        abort_unless($doc->file_path, 404, 'File not found.');
+        abort_unless(Storage::disk('public')->exists($doc->file_path), 404, 'File not found.');
+        return Storage::disk('public')->response($doc->file_path);
+    }
+
+    public function downloadDocument(Request $request, int $id)
+    {
+        $user = $this->companyUser($request);
+        $cid = (int) $user->company_id;
+        $studentIds = $this->applicationsQuery($cid)->pluck('student_id')->unique();
+        $doc = StudentDocument::query()->whereIn('student_id', $studentIds->all())->findOrFail($id);
+
+        if ($doc->file_path && Storage::disk('public')->exists($doc->file_path)) {
+            $downloadName = preg_replace('/[^a-z0-9\-_]+/i', '_', strtolower($doc->title));
+            $ext = pathinfo($doc->file_path, PATHINFO_EXTENSION);
+            $ext = $ext ? ".{$ext}" : '';
+            return Storage::disk('public')->download($doc->file_path, $downloadName . $ext);
+        }
+
+        $filename = preg_replace('/[^a-z0-9\-_]+/i', '_', strtolower($doc->title)) . '.txt';
+        $content = $doc->content ?: "Title: {$doc->title}\nType: {$doc->type}\nNo content.";
+
+        return response($content, 200, [
+            'Content-Type' => 'text/plain; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ]);
     }
 
@@ -1104,7 +1147,7 @@ class CompanyController extends Controller
 
         $app = $this->applicationsQuery((int) $company->id)->findOrFail((int) $validated['application_id']);
 
-        StudentInterview::create([
+        $interview = StudentInterview::create([
             'student_id' => $app->student_id,
             'application_id' => $app->id,
             'company_name' => $company->name,
@@ -1118,7 +1161,129 @@ class CompanyController extends Controller
         $ats[(string) $app->id] = 'interview';
         $this->saveAtsStages($company, $ats);
 
+        $notifier = app(ScheduleNotificationService::class);
+        $notifier->notifyStudent(
+            (int) $app->student_id,
+            'scheduled',
+            'Interview scheduled',
+            sprintf(
+                "Your interview has been scheduled.\n\nCompany: %s\nPosition: %s\nWhen: %s\nFormat: %s\n\nNotes: %s",
+                (string) $company->name,
+                (string) ($app->internship?->title ?? 'Internship'),
+                $notifier->formatWhen($interview->scheduled_at),
+                (string) ($interview->format ?? 'video'),
+                (string) ($interview->notes ?? '—')
+            ),
+            [
+                'event_type' => 'company_interview',
+                'event_id' => (int) $interview->id,
+                'scheduled_at' => $interview->scheduled_at?->toIso8601String(),
+                'company_id' => (int) $company->id,
+                'application_id' => (int) $app->id,
+            ],
+            'company-' . ((int) $company->id) . '-' . ((int) $app->student_id),
+            (string) $company->name,
+            $user->email ? (string) $user->email : null,
+            'urgent',
+            'urgent'
+        );
+
         return response()->json(['message' => 'Scheduled'], 201);
+    }
+
+    public function updateSchedule(Request $request, int $id)
+    {
+        $user = $this->companyUser($request);
+        $company = $this->companyModel($user);
+
+        $validated = Validator::make($request->all(), [
+            'scheduled_at' => 'sometimes|date',
+            'format' => 'sometimes|in:video,phone,in_person',
+            'notes' => 'sometimes|string|nullable',
+            'location' => 'sometimes|string|nullable|max:255',
+        ])->validate();
+
+        $interview = StudentInterview::query()->findOrFail($id);
+        abort_unless($interview->application_id, 422, 'Only application-linked schedules can be edited here.');
+
+        // Ensure the application belongs to this company.
+        $this->applicationsQuery((int) $company->id)->findOrFail((int) $interview->application_id);
+
+        $interview->update($validated);
+
+        // Inform student about update.
+        $app = Application::query()->with('internship')->find($interview->application_id);
+        if ($app && $app->student_id) {
+            $notifier = app(\App\Services\ScheduleNotificationService::class);
+            $notifier->notifyStudent(
+                (int) $app->student_id,
+                'updated',
+                'Interview updated',
+                sprintf(
+                    "Your interview schedule was updated.\n\nCompany: %s\nPosition: %s\nWhen: %s\nFormat: %s\n\nNotes: %s",
+                    (string) $company->name,
+                    (string) ($app->internship?->title ?? $interview->position_title ?? 'Internship'),
+                    $notifier->formatWhen($interview->scheduled_at),
+                    (string) ($interview->format ?? 'video'),
+                    (string) ($interview->notes ?? '—')
+                ),
+                [
+                    'event_type' => 'company_interview',
+                    'event_id' => (int) $interview->id,
+                    'scheduled_at' => $interview->scheduled_at?->toIso8601String(),
+                    'company_id' => (int) $company->id,
+                    'application_id' => (int) $app->id,
+                ],
+                'company-' . ((int) $company->id) . '-' . ((int) $app->student_id),
+                (string) $company->name,
+                $user->email ? (string) $user->email : null,
+                'follow_up',
+                'neutral'
+            );
+        }
+
+        return response()->json(['message' => 'Schedule updated.', 'item' => $interview->fresh()]);
+    }
+
+    public function destroySchedule(Request $request, int $id)
+    {
+        $user = $this->companyUser($request);
+        $company = $this->companyModel($user);
+
+        $interview = StudentInterview::query()->findOrFail($id);
+        abort_unless($interview->application_id, 422, 'Only application-linked schedules can be cancelled here.');
+        $app = $this->applicationsQuery((int) $company->id)->findOrFail((int) $interview->application_id);
+
+        $studentId = (int) $app->student_id;
+        $when = $interview->scheduled_at;
+        $interview->delete();
+
+        $notifier = app(\App\Services\ScheduleNotificationService::class);
+        $notifier->notifyStudent(
+            $studentId,
+            'cancelled',
+            'Interview cancelled',
+            sprintf(
+                "An interview was cancelled.\n\nCompany: %s\nPosition: %s\nWas scheduled for: %s\n\nYou will be contacted to reschedule if needed.",
+                (string) $company->name,
+                (string) ($app->internship?->title ?? 'Internship'),
+                $when ? $notifier->formatWhen($when) : '—'
+            ),
+            [
+                'event_type' => 'company_interview',
+                'event_id' => (int) $id,
+                'scheduled_at' => $when?->toIso8601String(),
+                'company_id' => (int) $company->id,
+                'application_id' => (int) $app->id,
+            ],
+            'company-' . ((int) $company->id) . '-' . $studentId,
+            (string) $company->name,
+            $user->email ? (string) $user->email : null,
+            'urgent',
+            'urgent'
+        );
+
+        return response()->json(['message' => 'Schedule cancelled.']);
     }
 
     public function analytics(Request $request)
@@ -1130,9 +1295,15 @@ class CompanyController extends Controller
         return response()->json([
             'pipeline_conversion' => [
                 'apply_to_shortlist' => $apps->count() ? round(22 / max(1, $apps->count()) * 100, 1) : 0,
-                'shortlist_to_offer' => 38,
+                'shortlist_to_offer' => $apps->where('status', 'pending')->count() > 0
+                    ? round($apps->where('status', 'approved')->count() / max(1, $apps->where('status', 'pending')->count()) * 100, 1)
+                    : 0,
             ],
-            'time_to_hire_days' => 18,
+            'time_to_hire_days' => round((float) (Application::query()
+                ->whereIn('internship_id', $this->internshipIds($cid)->all())
+                ->where('status', 'approved')
+                ->selectRaw('AVG(TIMESTAMPDIFF(DAY, created_at, updated_at)) as d')
+                ->value('d') ?: 0), 1),
             'intern_performance' => [
                 'avg_overall' => round((float) (Evaluation::query()->where('company_id', $cid)->avg('overall_performance') ?: 78), 1),
             ],
@@ -1142,12 +1313,40 @@ class CompanyController extends Controller
 
     public function generateReport(Request $request)
     {
-        $this->companyUser($request);
+        $user = $this->companyUser($request);
         Validator::make($request->all(), [
             'type' => 'required|in:recruitment,interns,roi',
         ])->validate();
 
-        return response()->json(['message' => 'Report queued.', 'download_url' => null]);
+        $cid = (int) $user->company_id;
+        $apps = $this->applicationsQuery($cid)->get();
+        $evals = Evaluation::query()->where('company_id', $cid)->get();
+
+        $payload = [
+            'applications' => [
+                'total' => $apps->count(),
+                'pending' => $apps->where('status', 'pending')->count(),
+                'approved' => $apps->where('status', 'approved')->count(),
+                'rejected' => $apps->where('status', 'rejected')->count(),
+            ],
+            'interviews_scheduled' => StudentInterview::query()->where('company_id', $cid)->count(),
+            'average_evaluation_score' => round((float) ($evals->avg('overall_performance') ?: 0), 1),
+        ];
+
+        $run = DashboardReportRun::query()->create([
+            'module' => 'company',
+            'owner_user_id' => $user->id,
+            'report_type' => (string) $request->input('type'),
+            'title' => 'Company ' . ucfirst((string) $request->input('type')) . ' report',
+            'status' => 'completed',
+            'payload' => $payload,
+            'generated_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Report generated successfully.',
+            'report' => $run,
+        ]);
     }
 
     public function team(Request $request)
@@ -1196,14 +1395,65 @@ class CompanyController extends Controller
 
     public function inviteStudents(Request $request)
     {
-        $this->companyUser($request);
-        Validator::make($request->all(), [
+        $user = $this->companyUser($request);
+        $validated = Validator::make($request->all(), [
             'student_ids' => 'required|array',
             'student_ids.*' => 'integer|exists:users,id',
             'internship_id' => 'nullable|exists:internships,id',
         ])->validate();
 
-        return response()->json(['message' => 'Invitations queued (demo).', 'sent' => count($request->input('student_ids', []))]);
+        $studentIds = collect($validated['student_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
+        $company = $this->companyModel($user);
+        $internshipId = isset($validated['internship_id']) ? (int) $validated['internship_id'] : null;
+        $sent = 0;
+        foreach ($studentIds as $studentId) {
+            $student = User::query()->where('role', 'student')->find($studentId);
+            if (!$student) {
+                continue;
+            }
+
+            Notification::query()->create([
+                'user_id' => $studentId,
+                'type' => 'company_invitation',
+                'title' => 'Company invitation',
+                'message' => "{$company->name} invited you to apply for an internship opportunity.",
+                'meta' => [
+                    'company_id' => $company->id,
+                    'company_name' => $company->name,
+                    'internship_id' => $internshipId,
+                    'student_id' => $studentId,
+                ],
+            ]);
+
+            StudentMessage::query()->create([
+                'student_id' => $studentId,
+                'thread_key' => 'company-invite-' . $company->id . '-' . $studentId,
+                'subject' => 'New internship invitation',
+                'from_name' => (string) $company->name,
+                'from_email' => (string) ($user->email ?? ''),
+                'category' => 'invitation',
+                'sentiment' => 'positive',
+                'body' => "You have received an internship invitation from {$company->name}.",
+            ]);
+
+            DashboardAuditEvent::query()->create([
+                'module' => 'company',
+                'action' => 'invite_student',
+                'severity' => 'info',
+                'actor_user_id' => $user->id,
+                'target_user_id' => $studentId,
+                'description' => "Company invitation sent to {$student->email}",
+                'meta' => [
+                    'company_id' => $company->id,
+                    'company_name' => $company->name,
+                    'internship_id' => $internshipId,
+                ],
+                'created_at' => now(),
+            ]);
+            $sent++;
+        }
+
+        return response()->json(['message' => 'Invitations sent and audited.', 'sent' => $sent]);
     }
 
     public function talentPool(Request $request)

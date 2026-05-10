@@ -15,7 +15,9 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
+        // Same-day reminders for scheduled interviews/meetings/vivas.
+        // Requires server cron running `php artisan schedule:run`.
+        $schedule->command('schedule:send-reminders')->dailyAt('07:00');
     }
 
     /**
